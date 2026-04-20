@@ -1,0 +1,72 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\556_Profile.jpg" />
+    <None Remove="Assets\basic_Profile.png" />
+    <None Remove="Assets\default_background.png" />
+    <None Remove="Assets\default_profile.jpg" />
+    <None Remove="Assets\jh.png" />
+    <None Remove="Assets\jihong.png" />
+    <None Remove="Assets\setting_Icon.png" />
+    <None Remove="Controls\FriendListControl.xaml~RF5ed23b2.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="FontAwesome6.Svg" Version="2.5.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Connections.Client" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="MySql.Data" Version="9.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommonLib\CommonLib.csproj" />
+    <ProjectReference Include="..\WPFLib\WPFLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\basic_Profile.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\default_background.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\default_profile.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\setting_Icon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Update="Views\AddFriendWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+</Project>

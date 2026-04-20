@@ -1,0 +1,74 @@
+﻿<UserControl x:Class="HAHATalk.Controls.FindAccountControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:HAHATalk.Controls"
+             xmlns:fa6="http://schemas.fontawesome.com/icons/svg"
+             xmlns:controls="clr-namespace:WPFLib.Controls;assembly=WPFLib"
+             mc:Ignorable="d" 
+             d:DesignHeight="550"
+             d:DesignWidth="350"
+             Background="{StaticResource ColorPrimary}">
+    
+    <UserControl.Resources>
+        <Style x:Key="ValidationTextStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ValidationText}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        
+    </UserControl.Resources>
+
+
+
+    <Grid Margin="20 40 20 20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1.3*"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="30"/>
+        </Grid.RowDefinitions>
+
+        <!-- 로고 -->
+        <fa6:SvgAwesome Icon="Brands_Rocketchat"
+                        Margin="20"
+                        PrimaryColor="{StaticResource ColorGray}"/>
+   
+    
+        <!-- Body -->
+        <StackPanel Grid.Row="1"
+                    Margin="30 10">
+            <controls:TextBoxControl 
+                x:Name="email"
+                Text="{Binding CellPhone}"
+                WaterMarkText="전화번호"
+                Background="White"
+                Height="{StaticResource MainElementHeight}"
+                Validating="{Binding CellPhone}"
+                Margin="0 0 0 10"
+                />
+            
+            <!-- 2026.03.16 아이디 찾기 추가 -->
+            <TextBlock Text="{Binding ValidationText}"
+                       Style="{StaticResource ValidationTextStyle}"
+                       Foreground="Red"
+                       Margin="0 5 0 0 "
+                       />
+            
+            <Button Content="계정 찾기"
+                    Command="{Binding FindAccountCommand}"
+                    Height="{StaticResource MainElementHeight}"
+                    Margin="0 30 0 10"/>
+        </StackPanel>
+    
+        <!-- Bottom -->
+        <local:MainNaviControl Grid.Row="2"
+                               HideButton="FindAccount"/>
+    </Grid>
+    
+  
+</UserControl>

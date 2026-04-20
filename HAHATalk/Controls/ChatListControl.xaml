@@ -1,0 +1,138 @@
+﻿<UserControl x:Class="HAHATalk.Controls.ChatListControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:HAHATalk.Controls"
+             xmlns:libConv="clr-namespace:WPFLib.Converters;assembly=WPFLib"
+             mc:Ignorable="d" 
+             d:DesignHeight="550" d:DesignWidth="350"
+             Background="#FFFFFF">
+    <UserControl.Resources>
+        <libConv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="20 10 20 0">
+            <TextBlock Text="채팅" FontSize="22"
+                       FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="#202020"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                        VerticalAlignment="Center" >
+                <Button Content="&#xE721;" FontFamily="Segoe MDL2 Assets"
+                        FontSize="18" Background="Transparent"
+                        BorderThickness="0" Cursor="Hand"
+                        Margin="0 0 15 0" Foreground="#404040"
+                        ToolTip="채팅방 검색"/>
+
+                <Button Content="&#xE8ED;" FontFamily="Segoe MDL2 Assets" 
+                        FontSize="18" Background="Transparent"
+                        BorderThickness="0" Cursor="Hand"
+                        Foreground="#404040" ToolTip="새 채팅 시작"/>
+            </StackPanel>
+        </Grid>
+
+        
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding ChatList}"   
+                 SelectedItem="{Binding SelectedChat}"
+                 x:Name="MyChatList"
+                 BorderThickness="0"                 
+                 HorizontalContentAlignment="Stretch">
+
+ 
+
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="15 8" Background="Transparent">
+                        <!-- 2026.04.06 InputBinginds 추가 -->
+                        <Grid.InputBindings>
+                            <MouseBinding MouseAction="LeftDoubleClick" 
+                              Command="{Binding DataContext.OpenChatRoomCommand, 
+                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"/>
+                        </Grid.InputBindings>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="55"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Ellipse Grid.Column="0" Width="48"
+                                 Height="48" HorizontalAlignment="Left">
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="{Binding ProfileImg, 
+                                    FallbackValue='/Assets/default_Profile.png'}"
+                                            Stretch="UniformToFill"/>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Margin="10 0 5 0">
+                            <TextBlock Text="{Binding TargetName}" FontSize="14"
+                                       FontWeight="SemiBold" Foreground="#333333"/>
+                            <TextBlock Text="{Binding LastMessage}" FontSize="12"
+                                       Foreground="#777777" Margin="0 3 0 0"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Top"
+                                    Margin="0 5 0 0">
+                            <TextBlock Text="{Binding LastTime, StringFormat='t'}"
+                                       FontSize="10" Foreground="#999999"
+                                       HorizontalAlignment="Right"/>
+
+                            <Border Background="#FF4B4B" CornerRadius="10"
+                                    MinWidth="20" HorizontalAlignment="Right"
+                                    Margin="0 6 0 0" 
+                                    Visibility="{Binding UnreadCount, Converter={StaticResource IntToVisibilityConverter}}">
+                                <TextBlock Text="{Binding UnreadCount}" Foreground="White"
+                                           FontSize="10" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Padding="5 0"/>
+
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                        BorderThickness="0" CornerRadius="5">
+                                    <ContentPresenter/>
+                                </Border>
+
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background"
+                                                Value="#F5F5F5"/>
+                                        
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Bd" Property="Background"
+                                                Value="#EDEDED"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+    </Grid>
+
+
+</UserControl>

@@ -1,0 +1,5 @@
+@HAHATalk.Server_HostAddress = https://localhost:7203
+GET {{HAHATalk.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

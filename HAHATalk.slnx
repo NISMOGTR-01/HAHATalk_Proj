@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CommonLib/CommonLib.csproj" Id="f95a872e-d845-4e32-ae2d-06caaa00d667" />
+  <Project Path="HAHATalk.Server/HAHATalk.Server.csproj" Id="818809fd-7efe-4848-a9b9-6a2914eb98a4" />
+  <Project Path="HAHATalk/HAHATalk.csproj" />
+  <Project Path="WPFLib/WPFLib.csproj" Id="d88ae502-4f78-4090-9a14-70736e298856" />
+</Solution>

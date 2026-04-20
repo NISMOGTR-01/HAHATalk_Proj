@@ -1,0 +1,62 @@
+﻿<UserControl x:Class="HAHATalk.Controls.TitleBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:HAHATalk.Controls" xmlns:fa6="http://schemas.fontawesome.com/icons/svg"
+             xmlns:converters="clr-namespace:HAHATalk.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="20" 
+             d:DesignWidth="200"
+             Name="root">
+    
+    <UserControl.Resources>
+        <converters:WindowStateMarginConverter x:Key="WindowStateMarginConverter"/>
+        <converters:WindowStateIconConverter x:Key="WindowStateIconConverter"/>
+      
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="25"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="DockPanel.Dock" Value="Right"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="DockPanel.Dock" Value="Right"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        </Style>
+        
+        <!-- -->
+        <Style TargetType="{x:Type fa6:SvgAwesome}">
+            <Setter Property="PrimaryColor" 
+                    Value="{StaticResource ColorGray}"/>
+        </Style>
+    </UserControl.Resources>
+    
+    <DockPanel x:Name="pnl_Title"
+               Background="{StaticResource ColorPrimary}"
+               LastChildFill="False">
+        <Button x:Name="btn_Exit"
+                Margin="{Binding WinState, 
+            ElementName=root, 
+            Converter={StaticResource WindowStateMarginConverter}, 
+            ConverterParameter=Exit}">
+            <fa6:SvgAwesome Icon="Solid_Xmark"/>
+        </Button>
+        
+        <Button x:Name="btn_Maximize"
+                Margin="{Binding WinState, 
+            ElementName=root, 
+            Converter={StaticResource WindowStateMarginConverter}}">
+            <fa6:SvgAwesome Icon="{Binding WinState, ElementName=root, 
+                Converter={StaticResource WindowStateIconConverter}}" 
+                            Width="15" 
+                            Height="15"/>
+        </Button>
+        
+        <Button x:Name="btn_Minimize"
+                Margin="{Binding WinState, 
+            ElementName=root,
+            Converter={StaticResource WindowStateMarginConverter}}">
+            <fa6:SvgAwesome Icon="Solid_Minus"/>
+        </Button>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,53 @@
+# 개발용 설정 파일 제외 (보안)
+# DB 설정 파일 제외
+settings.cs
+settings.Designer.cs
+appsettings.json
+Settings.settings
+launchSettings.json
+app.config
+
+# .NET Config Files
+App.config
+Settings.settings
+settings.cs
+settings.Designer.cs
+
+
+
+# [Build Artifacts]
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+
+# [Visual Studio]
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# [Database & Config - 핵심 보안]
+appsettings.json
+appsettings.Development.json
+Settings.settings
+settings.cs
+settings.Designer.cs
+App.Config
+*.db
+*.mdf
+*.ldf
+
+# [Publish & Secrets]
+Properties/PublishProfiles/
+secrets.json
+
+# [Others]
+*.log
+.DS_Storeappsettings*.json 
+App.config 
+Settings.settings 
+bin/ 
+obj/ 
+.vs/ 
