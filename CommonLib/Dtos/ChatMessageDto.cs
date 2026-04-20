@@ -16,5 +16,15 @@
         // 4.파일관련 (이미지 / 파일 전송 시) 
         public string? FilePath { get; set;  }
         public string? FileName { get; set; }
+
+        // UI에서 발신자 이름을 띄우기 위한 속성 
+        public string SenderName { get; set; } = string.Empty;
+
+        // 내 메시지인지 구분하는 플래그 (DataTrigger용) 
+        public bool IsMine {  get; set; }
+
+        // 시간 포맷팅 
+        public string FomattedTime => SendTime.ToString("t");
+        
     }
 }

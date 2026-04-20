@@ -94,6 +94,13 @@ namespace HAHATalk.ViewModels
                             // DB에서 데이터를 가져올 때 
                             // 내 이메일과 발신자 이메일을 비교해서 IsMine 세팅 
                             msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
+                            
+                            // 2024.04.20 내가 보낸 게 아니라면 상대방 이름을 꽃아줌 
+                            if(!msg.IsMine)
+                            {
+                                msg.SenderName = TargetName;
+                            }
+
                             Messages.Add(msg);
                         }
                     }
@@ -317,8 +324,10 @@ namespace HAHATalk.ViewModels
 
         private void OnMessageReceived(string senderEmail, string message)
         {
+            System.Diagnostics.Debug.WriteLine($"[SignalR 수신 체크] 발신자: {senderEmail}, 메시지: {message}");
+
             // 내가 보낸 게 아니고 현재 열려 있는 이 채팅방의 메세지??
-            if(senderEmail == TargetId)
+            if (senderEmail == TargetId)
             {
                 App.Current.Dispatcher.Invoke(() =>
                 {
@@ -326,6 +335,7 @@ namespace HAHATalk.ViewModels
                     {
                         RoomId = RoomId,
                         SenderId = senderEmail,
+                        SenderName = TargetName,
                         Message = message,
                         SendTime = DateTime.Now,
                         IsMine = false

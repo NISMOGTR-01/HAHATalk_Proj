@@ -30,6 +30,11 @@ namespace HAHATalk.Server.Hubs
                 .Where(c => c.RoomId == roomId && (c.OwnerId == senderId || c.OwnerId == targetId))
                 .ToListAsync();
 
+
+
+            Console.WriteLine($"[SignalR] 메시지 수신: {senderId} -> {targetId} (Room: {roomId})");
+            Console.WriteLine($"[SignalR] 내용: {message}");
+
             foreach (var room in rooms)
             {
                 room.LastMessage = message;     // 최신 메세지를 전송한 메세지로 갱신

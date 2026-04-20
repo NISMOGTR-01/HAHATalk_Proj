@@ -26,7 +26,7 @@ namespace HAHATalk.Services
 
             // 허브 연결 설정 (서버 주소는 환경에 맞게 수정) 
             _connection = new HubConnectionBuilder()
-                .WithUrl("https://localhost:7203", options =>
+                .WithUrl("https://localhost:7203/ChatHub", options =>
                 {
                     // 필요 시 AccessToken 등을 헤더에 담을 수 있습니다.
                     // options.AccessTokenProvider = () => Task.FromResult(_userStore.Token);

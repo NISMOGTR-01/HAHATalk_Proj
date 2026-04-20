@@ -11,6 +11,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Collections.Specialized;
+using HAHATalk.Controls; // 2025.04.20 추가 
 
 namespace HAHATalk.Views
 {
@@ -23,6 +25,40 @@ namespace HAHATalk.Views
         {
             InitializeComponent();
 
+            // DataContext가 변경될 때마다 이벤트 등록 
+            this.DataContextChanged += ChatRoomWindow_DataContextChanged;
+
+        }
+
+        private void ChatRoomWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if(e.NewValue is ChatRoomViewModel vm)
+            {
+                // 메세지 목록이 바뀌면 (메세지 추가) 스크롤을 자동으로 내리도록 
+                vm.Messages.CollectionChanged += (s, args) =>
+                {
+                    if(args.Action == NotifyCollectionChangedAction.Add)
+                    {
+                        ScrollToBottom();
+                    }
+                };
+
+                // 초기 로딩시 스크롤 이동 (데이터가 로드된 후 실행되도록 지연 노출) 
+                Dispatcher.BeginInvoke(new Action(() => ScrollToBottom()), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        private void ScrollToBottom()
+        {
+            // UI 스레드 안전성 보장 
+            Dispatcher.Invoke(() =>
+            {
+                if(ChatScroller != null)
+                {
+                    // 가장 아래로 스크롤 이동 
+                    ChatScroller.ScrollToEnd();
+                }    
+            });
         }
 
         // 채팅창 드래그 기능 추가 
