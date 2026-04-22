@@ -24,5 +24,7 @@ namespace HAHATalk.Services
         event Action<string, string> MessageReceived;
 
         Task JoinRoom(string roomId);
+
+        Task SendReadReceiptAsync(string roomId, string targetId);
     }
 }

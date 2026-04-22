@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HAHATalk.Server.Repositories
+namespace HAHATalk.Server.Repository
 {
     public interface IFriendRepository
     {

@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 using HAHATalk.Services;
 using HAHATalk.Stores;
 using System;

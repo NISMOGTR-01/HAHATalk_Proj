@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing.Text;
 using System.Text;
+using HAHATalk.Messages;
 
 namespace HAHATalk.ViewModels
 {

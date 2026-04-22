@@ -95,5 +95,11 @@ namespace HAHATalk.Services
 
             return response.IsSuccessStatusCode;
         }
+
+        public async Task MarkAsReadAsync(string roomId, string userId)
+        {
+            var request = new {RoomId = roomId, UserId = userId};
+            await _httpClient.PostAsJsonAsync("api/chat/mark-read", request);
+        }
     }
 }

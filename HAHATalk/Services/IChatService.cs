@@ -18,5 +18,7 @@ namespace HAHATalk.Services
         // 채팅 목록 업데이트 
         Task<bool> UpdateChatListAsync(ChatMessage message, string targetId,
             string targetName, string myId, string myNickname);
+
+        Task MarkAsReadAsync(string roomId, string userId);
     }
 }

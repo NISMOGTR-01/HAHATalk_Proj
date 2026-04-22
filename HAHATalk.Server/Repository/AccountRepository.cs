@@ -1,13 +1,13 @@
-﻿using CommonLib.DataBase;
+﻿using Dapper;
 using CommonLib.Models;
 using HAHATalk.Server.Repository;
-using Microsoft.Data.SqlClient; // [필수]
-using Org.BouncyCastle.Bcpg.OpenPgp;
-using SqlParameter = Microsoft.Data.SqlClient.SqlParameter;
 using HAHATalk.Server.Security;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using Serilog;
 
 
-namespace HAHATalk.Server.Repositories
+namespace HAHATalk.Server.Repository
 {
     public class AccountRepository : RepositoryBase, IAccountRepository
     {
@@ -19,93 +19,98 @@ namespace HAHATalk.Server.Repositories
         
         public async Task<bool> MSSQL_ExistEmailAsync(string email)
         {
-            string query = "SELECT 1 FROM account WHERE email = @email";
+            const string query = "SELECT COUNT(1) FROM account WHERE email = @email";
 
-            using (MSSqlDb db = MSAccountDb)
+            try
             {
-                using (var dr = await db.GetReaderAsync(query, new SqlParameter[] {
-                    new SqlParameter("@email", email)
-                }))
-                {
-                    return await dr.ReadAsync();
-                }
+                using var db = CreateConnection();
+                int count = await db.ExecuteScalarAsync<int>(query, new { email });
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Account] 이메일 중복 체크 중 오류 발생 (Email: {Email})", email);
+                return false;
             }
         }
 
         public async Task<string?> MSSQL_Find_AccountAsync(Account account)
         {
             string phoneNumber = account.CellPhone?.Replace("-", "") ?? "";
-            string query = "SELECT email FROM account WHERE cell_phone = @cell_phone";
+            const string query = "SELECT email FROM account WHERE cell_phone = @cell_phone";
 
-            using (MSSqlDb db = MSAccountDb)
+            try
             {
-                using (var dr = await db.GetReaderAsync(query, new SqlParameter[]
-                {
-                    new SqlParameter("@cell_phone", phoneNumber)
-                }))
-                {
-                    if(await dr.ReadAsync())
-                    {
-                        return dr["email"].ToString();
-                    }
-                }
+                using var db = CreateConnection();
+                // 단일 문자열 값만 가져올 때도 ExecuteScalar가 편합니다.
+                var email = await db.ExecuteScalarAsync<string>(query, new { cell_phone = phoneNumber });
+                return email ?? "0";
             }
-
-            return "0";
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Account] 계정 찾기 중 오류 발생 (Phone: {Phone})", phoneNumber);
+                return "0";
+            }
         }
 
         public async Task<Account?> MSSQL_GetAccountByEmailAsync(string email)
         {
-            string query = "SELECT email, nickname, pwd FROM account WHERE email = @email";
+            // DB 컬럼명과 모델 프로퍼티명을 맞추기 위해 Alias 사용 (pwd -> Pwd)
+            const string query = "SELECT email AS Email, nickname AS Nickname, pwd AS Pwd FROM account WHERE email = @email";
 
-            using (MSSqlDb db = MSAccountDb)
+            try
             {
-                using (var dr = await db.GetReaderAsync(query, new SqlParameter[]
-                {
-                    new SqlParameter("email", email)
-                }))
-                {
-                    if(await dr.ReadAsync())
-                    {
-                        return new Account
-                        {
-                            Email = dr["email"].ToString()!, 
-                            Nickname = dr["nickname"].ToString()!,
-                            Pwd = dr["pwd"].ToString()! // 
-                        };
-                    }
-                }                
+                using var db = CreateConnection();
+                // QueryFirstOrDefaultAsync는 결과가 없으면 null을 반환합니다.
+                return await db.QueryFirstOrDefaultAsync<Account>(query, new { email });
             }
-            return null;
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Account] 계정 조회 중 오류 발생 (Email: {Email})", email);
+                return null;
+            }
         }
 
         public async Task<bool> MSSQL_Login_CheckAsync(string email, string pwd)
         {
             var account = await MSSQL_GetAccountByEmailAsync(email);
 
-            if(account == null)
+            if (account == null)
             {
+                Log.Warning("[Account] 로그인 실패: 존재하지 않는 계정 (Email: {Email})", email);
                 return false;
             }
 
-            return SecurityHelper.VerifyPassword(pwd, account.Pwd);
+            bool isSuccess = SecurityHelper.VerifyPassword(pwd, account.Pwd);
+
+            if (!isSuccess)
+                Log.Warning("[Account] 로그인 실패: 비밀번호 불일치 (Email: {Email})", email);
+            else
+                Log.Information("[Account] 로그인 성공 (Email: {Email})", email);
+
+            return isSuccess;
         }
 
         public async Task<long> MSSQL_Pass_UpdateAsync(Account account, string changePwd)
         {
             // 변경할 비밀번호 암호화
             string hashedPwd = SecurityHelper.HashPassword(changePwd);
+            const string query = "UPDATE account SET pwd = @pwd WHERE email = @email";
 
-            string query = "UPDATE account SET pwd = @pwd WHERE email = @email";
-
-            using (MSSqlDb db = MSAccountDb)
+            try
             {
-                return await db.ExecuteAsync(query, new SqlParameter[] 
-                { 
-                    new SqlParameter("@pwd", hashedPwd),
-                    new SqlParameter("@email", account.Email),
+                using var db = CreateConnection();
+                int rows = await db.ExecuteAsync(query, new { pwd = hashedPwd, email = account.Email });
 
-                });
+                if (rows > 0)
+                    Log.Information("[Account] 비밀번호 변경 완료 (Email: {Email})", account.Email);
+
+                return rows;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Account] 비밀번호 변경 중 오류 발생 (Email: {Email})", account.Email);
+                return 0;
             }
         }
 
@@ -113,25 +118,35 @@ namespace HAHATalk.Server.Repositories
         {
             // 회원 가입시 비밀번호 암호화 
             // parameter로 받은 changePwd가 있다면 그것을,없다면 account.Pwd를 암호화 
-            string hashedPwd = SecurityHelper.HashPassword(!string.IsNullOrEmpty(changPwd) ? changPwd : account.Pwd);
+            string targetPwd = !string.IsNullOrEmpty(changPwd) ? changPwd : account.Pwd;
+            string hashedPwd = SecurityHelper.HashPassword(targetPwd);
 
-
-            string query = @"
+            const string query = @"
                 INSERT INTO account (pwd, email, nickname, cell_phone)
-                VALUES (@pwd, @email, @nickname, @cell_phone);";
+                VALUES (@hashedPwd, @Email, @Nickname, @CellPhone);";
 
-            using (MSSqlDb db = MSAccountDb)
+            try
             {
-                return await db.ExecuteAsync(query, new SqlParameter[]
+                using var db = CreateConnection();
+                // Dapper는 익명 객체 프로퍼티와 쿼리의 @파라미터를 매핑합니다.
+                int rows = await db.ExecuteAsync(query, new
                 {
-                    new SqlParameter("@pwd", hashedPwd),
-                    new SqlParameter("@email", account.Email),
-                    new SqlParameter("@nickname", account.Nickname),
-                    new SqlParameter("@cell_phone", account.CellPhone),
+                    hashedPwd,
+                    account.Email,
+                    account.Nickname,
+                    account.CellPhone
                 });
+
+                if (rows > 0)
+                    Log.Information("[Account] 신규 회원가입 완료 (Email: {Email})", account.Email);
+
+                return rows;
             }
-
-
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Account] 회원가입 처리 중 오류 발생 (Email: {Email})", account.Email);
+                return 0;
+            }
         }
     }
 }

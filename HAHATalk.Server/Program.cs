@@ -1,8 +1,8 @@
 using HAHATalk.Server.Hubs;
 using Microsoft.EntityFrameworkCore;
-using HAHATalk.Server.Data;
+
 using HAHATalk.Server.Repository;
-using HAHATalk.Server.Repositories;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 // DB 연결 문자열 등록 (2026.03.26) 
 var connectionString = builder.Configuration.GetConnectionString("MSAccountDb");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
 
 
 

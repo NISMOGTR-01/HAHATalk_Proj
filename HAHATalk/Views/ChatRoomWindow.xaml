@@ -16,6 +16,22 @@
         <DataTemplate x:Key="MyMessageTemplate">
             <Grid Margin="10 5" HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <TextBlock Text="1" FontSize="11" Foreground="#FEE500"
+                               FontWeight="Bold" VerticalAlignment="Bottom"
+                               Margin="0 0 5 2">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRead}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    
+                    
                     <TextBlock Text="{Binding FormattedTime}" FontSize="10"
                                Foreground="#666666" VerticalAlignment="Bottom"
                                Margin="0 0 5 0"/>
@@ -123,6 +139,21 @@
                         <TextBlock Text="{Binding FormattedTime}" FontSize="10"
                                    Foreground="#666666"
                                    VerticalAlignment="Bottom" Margin="5 0 0 0"/>
+
+                        <TextBlock Text="1" FontSize="11" Foreground="#FEE500"
+                                   FontWeight="Bold" VerticalAlignment="Bottom"
+                                   Margin="5 0 0 2">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRead}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>                                        
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                 </StackPanel>
             </Grid>

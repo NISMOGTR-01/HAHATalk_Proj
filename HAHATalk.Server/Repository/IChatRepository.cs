@@ -5,7 +5,7 @@ using CommonLib.Models;
 using System.Threading.Tasks;
 using CommonLib.Dtos;
 
-namespace HAHATalk.Server.Repositories
+namespace HAHATalk.Server.Repository
 {
     public interface IChatRepository
     {
@@ -24,5 +24,9 @@ namespace HAHATalk.Server.Repositories
 
         // 2026.04.01 채팅창 업데이트 
         Task<bool> MSSQL_UpdateChatListAsync(ChatMessageDto message, string targetId, string targetName, string myId, string myNickname);
+
+        Task<bool> MSSQL_UpdateReadStatusAsync(string roomId, string userId);
+
+        Task<bool> MarkAsReadAsync(string roomId, string userId);
     }
 }

@@ -1,14 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using HAHATalk.Server.Repositories;
+using HAHATalk.Server.Repository;
 using CommonLib.Models;
 using CommonLib.Dtos;
-using HAHATalk.Server.Data; // AppDbContext 
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using HAHATalk.Server.Hubs;
+using Serilog;
 
 namespace HAHATalk.Server.Controllers
 {
@@ -17,13 +16,18 @@ namespace HAHATalk.Server.Controllers
     public class FriendController : ControllerBase
     {
         private readonly IFriendRepository _friendRepository;
-        private readonly AppDbContext _context;
+        private readonly IAccountRepository _accountRepository;
+        private readonly IChatRepository _chatRepository;
         private readonly IHubContext<ChatHub> _hubContext; 
 
-        public FriendController(IFriendRepository friendRepository, AppDbContext context, IHubContext<ChatHub> hubContext)
+        public FriendController(IFriendRepository friendRepository,
+            IAccountRepository accountRepository,
+            IChatRepository chatRepository,
+            IHubContext<ChatHub> hubContext)
         {
-            this._friendRepository = friendRepository;
-            this._context = context;
+            _friendRepository = friendRepository;
+            _accountRepository = accountRepository;
+            _chatRepository = chatRepository;
             _hubContext = hubContext;
         }
 
@@ -38,7 +42,8 @@ namespace HAHATalk.Server.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error : {ex.Message}");
+                Log.Error(ex, "[Friend] 목록 조회 중 오류 (MyId: {MyId})", myId);
+                return StatusCode(500, "서버 내부 오류 발생");
             }
         }
 
@@ -48,90 +53,66 @@ namespace HAHATalk.Server.Controllers
         {
             try
             {
-                // 실존 계정 체크 
-                var targetAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == dto.TargetEmail);
-
-                if(targetAccount == null)
+                // [검증 1] 상대방 계정이 실제로 존재하는지 확인 (Dapper)
+                bool isExist = await _accountRepository.MSSQL_ExistEmailAsync(dto.TargetEmail);
+                if (!isExist)
                 {
                     return BadRequest("해당 이메일을 사용하는 사용자가 존재하지 않습니다.");
                 }
 
-                // 이미 친구인지 확인
-                bool exists = await _friendRepository.IsFriendAlreadyExistsAsync(dto.MyEmail, dto.TargetEmail);
-
-                if(exists)
+                // [검증 2] 이미 친구인지 확인 (Dapper)
+                bool isAlreadyFriend = await _friendRepository.IsFriendAlreadyExistsAsync(dto.MyEmail, dto.TargetEmail);
+                if (isAlreadyFriend)
                 {
                     return BadRequest("이미 등록된 친구입니다.");
                 }
 
-                // 기존 Repository를 통한 친구 추가 
-                bool isResult = await _friendRepository.AddFriendAsync(
-                    dto.MyEmail, 
+                // [실행 1] 친구 테이블에 추가
+                bool addSuccess = await _friendRepository.AddFriendAsync(
+                    dto.MyEmail,
                     dto.TargetEmail,
-                    dto.FriendName, 
+                    dto.FriendName,
                     dto.StatusMessage ?? ""
-                    );
+                );
 
-                if(isResult)
+                if (addSuccess)
                 {
-                    // 실시간 채팅을 위한 ChatList(방 목록) 생성 
-                    var emailList = new List<string>
-                    {
-                        dto.MyEmail, dto.TargetEmail
-                    };
+                    // [실행 2] 채팅방 ID 생성 (알파벳 정렬 순)
+                    var emailList = new List<string> { dto.MyEmail, dto.TargetEmail };
                     emailList.Sort();
                     string roomId = string.Join("_", emailList);
 
-                    // 내 시점의 채팅 목록 생성 
-                    var myChat = await _context.ChatLists.FirstOrDefaultAsync(c => c.RoomId == roomId && c.OwnerId == dto.MyEmail);
+                    // [실행 3] 양방향 채팅 목록 생성/업데이트
+                    // 내 닉네임을 가져와서 상대방 방 목록에 표시될 이름을 준비합니다.
+                    var myAccount = await _accountRepository.MSSQL_GetAccountByEmailAsync(dto.MyEmail);
 
-                    if (myChat == null)
+                    var initialMsg = new ChatMessageDto
                     {
-                        _context.ChatLists.Add(new Models.ChatList
-                        {
-                            RoomId = roomId, 
-                            OwnerId = dto.MyEmail, 
-                            TargetId = dto.TargetEmail, 
-                            TargetName = dto.FriendName, 
-                            LastMessage = "새로운 친구와 대화를 시작해보세요!", 
-                            LastTime = DateTime.Now,
-                            UnreadCount = 0,
-                        });
-                    }
+                        RoomId = roomId,
+                        Message = "새로운 친구와 대화를 시작해보세요!",
+                        SendTime = DateTime.Now
+                    };
 
-                    // 상대방 시점의 채팅 목록 생성 
-                    var targetChat = await _context.ChatLists.FirstOrDefaultAsync(c => c.RoomId == roomId && c.OwnerId == dto.TargetEmail);
+                    // ChatRepository의 Dapper 로직을 사용하여 양방향 데이터를 Insert/Update 합니다.
+                    await _chatRepository.MSSQL_UpdateChatListAsync(
+                        initialMsg,
+                        dto.TargetEmail, dto.FriendName, // 내가 보는 상대방 이름
+                        dto.MyEmail, myAccount?.Nickname ?? dto.MyEmail // 상대방이 보는 내 이름
+                    );
 
-                    if(targetChat == null)
-                    {
-                        var myAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == dto.MyEmail);
-                        _context.ChatLists.Add(new Models.ChatList
-                        {
-                            RoomId = roomId,
-                            OwnerId = dto.TargetEmail,
-                            TargetId = dto.MyEmail,
-                            TargetName = myAccount?.Nickname ?? dto.MyEmail,
-                            LastMessage = "새로운 친구와 대화를 시작해보세요!",
-                            LastTime = DateTime.Now,
-                            UnreadCount = 0
-                        });
-                    }
-
-                    // ChatLIst 변경 사항 최종 저장 
-                    await _context.SaveChangesAsync();
-
-                    // 상대방에게 실시간 알림 전송 
-                    // 상대방이 로그인 중인경우 즉시 채팅 목록을 갱신하라는 신호 
+                    // [실행 4] 실시간 알림 (SignalR)
                     await _hubContext.Clients.User(dto.TargetEmail).SendAsync("UpdateChatList");
 
+                    Log.Information("[Friend] 친구 추가 완료: {MyId} -> {Target}", dto.MyEmail, dto.TargetEmail);
                     return Ok(true);
                 }
 
-                return BadRequest("친구 등록에 실패했습니다.");
+                return BadRequest("친구 등록 처리에 실패했습니다.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"서버 오류: {ex.Message}");
+                Log.Error(ex, "[Friend] 추가 중 예외 발생: {MyId} -> {Target}", dto.MyEmail, dto.TargetEmail);
+                return StatusCode(500, "서버 오류가 발생했습니다.");
             }
         }
 
@@ -144,11 +125,11 @@ namespace HAHATalk.Server.Controllers
             {
                 bool exists = await _friendRepository.IsFriendAlreadyExistsAsync(myId, friendEmail);
                 return Ok(exists);
-
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error : {ex.Message}");
+                Log.Error(ex, "[Friend] 중복 체크 오류: {MyId}, {Friend}", myId, friendEmail);
+                return StatusCode(500, "Internal server error");
             }
         }
     }
