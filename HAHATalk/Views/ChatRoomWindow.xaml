@@ -13,9 +13,46 @@
              AllowsTransparency="True"
              >
     <Window.Resources>
+        
         <DataTemplate x:Key="MyMessageTemplate">
             <Grid Margin="10 5" HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"
+                                Margin="0 0 5 2">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="재전송"
+                                          Command="{Binding DataContext.RetrySendMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="삭제"
+                                          Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                          CommandParameter="{Binding}"/>
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                        
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SendState}" Value="2">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        
+                        <Grid Margin="0 0 3 0" Cursor="Hand">
+                            <Ellipse Width="14" Height="14" Fill="#FF5C5C"/>
+                            <TextBlock Text="!" Foreground="White" FontSize="10"
+                                       FontWeight="Bold" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="0 0 0 1"/>
+                        </Grid>
+                        <TextBlock Text="실패" Foreground="#FF5C5C" FontSize="10"
+                                   VerticalAlignment="Bottom" Cursor="Hand"/>
+                    </StackPanel>                   
+                    
                     <TextBlock Text="1" FontSize="11" Foreground="#FEE500"
                                FontWeight="Bold" VerticalAlignment="Bottom"
                                Margin="0 0 5 2">
@@ -26,16 +63,31 @@
                                     <DataTrigger Binding="{Binding IsRead}" Value="True">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
+                                    
+                                    <!-- 2026.04.25 SendState Add -->
+                                    <DataTrigger Binding="{Binding SendState}" Value="2">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    
-                    
+
+
                     <TextBlock Text="{Binding FormattedTime}" FontSize="10"
                                Foreground="#666666" VerticalAlignment="Bottom"
-                               Margin="0 0 5 0"/>
-
+                               Margin="0 0 5 0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SendState}" Value="2">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+ 
                     <Border Background="#FEE500" CornerRadius="10 0 10 10"
                             Padding="7">
                         <StackPanel>

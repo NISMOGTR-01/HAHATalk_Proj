@@ -21,13 +21,47 @@ namespace HAHATalk.Views
     /// </summary>
     public partial class ChatRoomWindow : Window
     {
+      
+
         public ChatRoomWindow()
         {
-            InitializeComponent();
+            InitializeComponent();          
 
             // DataContext가 변경될 때마다 이벤트 등록 
             this.DataContextChanged += ChatRoomWindow_DataContextChanged;
 
+            // 2026.04.22 채팅창이 포커스를 얻었을 때 
+            this.Activated += async (s, e) =>
+            {
+                if(this.DataContext is ChatRoomViewModel viewModel)
+                {
+                    viewModel.IsWindowActive = true;
+
+                    // 창이 켜지는 순간 안 읽은 메시지가 있다면 읽음 처리 
+                    var unreadMessages = viewModel.Messages.Where(x => !x.IsRead).ToList();
+                    if (unreadMessages.Any())
+                    {
+                        foreach (var msg in unreadMessages)
+                        {
+                            msg.IsRead = true;
+
+                          
+                        }
+
+                        // 서버와 상대방에게 읽음 신호 전송 
+                        await viewModel.MarkAllReadAsync();
+                    }
+                }                
+            };
+
+            // 창이 focus를 잃었을 때 (다른 창 클릭, 최소화 등) 
+            this.Deactivated += (s, e) =>
+            {
+                if(this.DataContext is ChatRoomViewModel viewModel)
+                {
+                    viewModel.IsWindowActive = false;
+                }
+            };
         }
 
         private void ChatRoomWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

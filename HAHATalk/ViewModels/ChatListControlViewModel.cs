@@ -55,8 +55,28 @@ namespace HAHATalk.ViewModels
                 });
             });
 
-            // 우선 테스트용 더미 데이터를 제작 
-            //LoadDummyData();
+
+
+
+            // 2026.04.22 누군가 나에게 새 메시지를 보냈을 때 목록 갱신 
+            WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
+            {
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    // Dapper를 통해 DB에서 최신 목록을 통째로 다시 읽어오기 
+                    await LoadChatListAsync();                    
+                });
+            });
+
+
+            // 2026.04.22 상대방이 내가 보낸 메시지를 읽었을 때 (목록의 내 배지 카운트 감소 등) 
+            WeakReferenceMessenger.Default.Register<MessagesReadMessage>(this, (r, m) =>
+            {
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    await LoadChatListAsync();
+                });
+            });
             _ = LoadChatListAsync();
         }
 

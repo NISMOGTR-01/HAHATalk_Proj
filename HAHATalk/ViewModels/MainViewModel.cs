@@ -13,8 +13,6 @@ namespace HAHATalk.ViewModels
     [ObservableObject]
     public partial class MainViewModel
     {
-
-
         //2026.03.18 navigationStore 변수로 추가 
         private readonly MainNavigationStore _navigationStore;
 
@@ -24,14 +22,20 @@ namespace HAHATalk.ViewModels
         [ObservableProperty]
         private SlideType _slideType = default!;
 
-        // 2028.03.18 Add
+        // 2026.03.18 Add
         // 사이드바가 보일지 결정하는 속성 
         [ObservableProperty]
         private bool _isSideBarVisible;
 
-        public MainViewModel(MainNavigationStore mainNavigationStore)
+        // 2026.04.22 UserStore 추가 
+        [ObservableProperty]
+        private UserStore _userStore;
+
+        public MainViewModel(MainNavigationStore mainNavigationStore, 
+            UserStore userStore)
         {
             _navigationStore = mainNavigationStore;
+            _userStore = userStore; // XAML에서 UserStore.TotalUnreadCount에 접근 가능 
 
             // Store 이벤트 구독 
             _navigationStore.CurrentViewModelChanged += CurrentViewModelChanged;

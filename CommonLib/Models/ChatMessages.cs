@@ -41,6 +41,24 @@ namespace CommonLib.Models
         [ObservableProperty]
         private string _profilePath;
 
+        public string MessageGuid { get; set; } 
+
+        // 전송 상태를 정의하는 enum 
+        public enum MessageStatus
+        {
+            Sending = 0,    // 전송 중 
+            Success = 1,    // 성공 
+            Fail = 2,       // 실패
+        }
+
+        // DB의 SendState 컬럼과 mapping 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(Status))] // SendState가 바뀌면 Status 속성도 알림
+        private int _sendState = (int)MessageStatus.Success;
+
+        // UI 바인딩용 가독성 속성 
+        public MessageStatus Status => (MessageStatus)SendState;
+
         // 이미지 메시지 인지 여부를 즉시 판단하는 읽기 전용속성 
         public bool IsImage => MessageType == 1 && !string.IsNullOrEmpty(FilePath);
 

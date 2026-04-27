@@ -171,18 +171,47 @@
 
                         <Button Command="{Binding NavigateToChatListCommand}"
                                 Background="Transparent" BorderThickness="0" Margin="0 15" Cursor="Hand">
-                            <fa6:SvgAwesome Icon="Solid_Comment" Width="22">
-                                <fa6:SvgAwesome.Style>
-                                    <Style TargetType="fa6:SvgAwesome">
-                                        <Setter Property="PrimaryColor" Value="#888888"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding CurrentViewModel.ControlName}" Value="ChatList">
-                                                <Setter Property="PrimaryColor" Value="Black"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </fa6:SvgAwesome.Style>
-                            </fa6:SvgAwesome>
+                            <Grid>
+                                <fa6:SvgAwesome Icon="Solid_Comment" Width="22">
+                                    <fa6:SvgAwesome.Style>
+                                        <Style TargetType="fa6:SvgAwesome">
+                                            <Setter Property="PrimaryColor" Value="#888888"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentViewModel.ControlName}" Value="ChatList">
+                                                    <Setter Property="PrimaryColor" Value="Black"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </fa6:SvgAwesome.Style>
+                                </fa6:SvgAwesome>
+
+                                <Border Background="#FF4B4B"
+                                        CornerRadius="8"
+                                        MinWidth="16" Height="16"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="10 -8 -10 0"
+                                        Padding="3 0"
+                                        IsHitTestVisible="False">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding UserStore.TotalUnreadCount}"
+                                                             Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
+                                    <TextBlock Text="{Binding UserStore.TotalUnreadCount}"
+                                               Foreground="White" FontSize="9"
+                                               FontWeight="Bold" 
+                                               HorizontalAlignment="Center" 
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </Grid>                           
                         </Button>
 
                         <Button Command="{Binding CurrentViewModel.RefreshFriendsCommand}"

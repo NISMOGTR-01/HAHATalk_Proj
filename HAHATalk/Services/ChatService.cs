@@ -69,12 +69,13 @@ namespace HAHATalk.Services
                 Message = new
                 {
                     RoomId = message.RoomId,
-                    SenderId = message.SenderId,                    
+                    SenderId = message.SenderId,
                     Message = message.Message,
                     MessageType = message.MessageType,
                     SendTime = message.SendTime,
                     FilePath = message.FilePath,
-                    FileName = message.FileName,                    
+                    FileName = message.FileName,
+                    MessageGuid = message.MessageGuid
                 },                
 
                 TargetId = targetId,

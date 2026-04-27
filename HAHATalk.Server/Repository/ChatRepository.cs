@@ -38,7 +38,7 @@ namespace HAHATalk.Server.Repository
         // 채팅방 메세지 내역 가져오기
         public async Task<List<ChatMessage>> MSSQL_GetMessageByRoomIdAsync(string roomId)
         {
-            const string query = @"SELECT RoomId, SenderId, Message, SendTime, IsRead, MessageType, FilePath, FileName 
+            const string query = @"SELECT RoomId, SenderId, Message, SendTime, IsRead, MessageType, FilePath, FileName, MessageGuid
                                  FROM ChatMessage WHERE RoomId = @roomId ORDER BY SendTime ASC";
 
             try
@@ -72,19 +72,38 @@ namespace HAHATalk.Server.Repository
 
         // 메세지 저장
         public async Task<bool> MSSQL_SaveMessageAsync(ChatMessage message)
-        {
-            const string query = @"INSERT INTO ChatMessage (RoomId, SenderId, Message, SendTime, IsRead, MessageType, FilePath, FileName) 
-                                 VALUES (@RoomId, @SenderId, @Message, @SendTime, @IsRead, @MessageType, @FilePath, @FileName)";
+        {   
+            // MessageGuid가 있을 경우 중복 확인 후 INSERT (IF NOT EXISTS 활용) 
+            // MessageGuid가 없을 경우 (과거 데이터등) 바로 INSERT
+
+            const string query = @"
+                IF @MessageGuid IS NOT NULL AND @MessageGuid <> ''
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM ChatMessage WHERE MessageGuid = @MessageGuid)
+                    BEGIN
+                        INSERT INTO ChatMessage (RoomId, SenderId, Message, SendTime, IsRead, MessageType, FilePath, FileName, MessageGuid) 
+                        VALUES (@RoomId, @SenderId, @Message, @SendTime, @IsRead, @MessageType, @FilePath, @FileName, @MessageGuid)
+                    END
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO ChatMessage (RoomId, SenderId, Message, SendTime, IsRead, MessageType, FilePath, FileName, MessageGuid) 
+                    VALUES (@RoomId, @SenderId, @Message, @SendTime, @IsRead, @MessageType, @FilePath, @FileName, @MessageGuid)
+                END";
 
             try
             {
                 using var db = CreateConnection();
-                int rows = await db.ExecuteAsync(query, message);
-                return rows > 0;
+                int rows = await db.ExecuteAsync(query, message);   // Dapper가 message 객체의 프로터피를 자동으로 mapping 
+
+                                                                    // rows가 0인 경우는 '중복되어서 INSERT가 안 된 경우'입니다.
+                                                                    // 클라이언트에게는 성공(true)을 보내야 재전송을 멈추므로 true를 반환하는 로직이 핵심입니다.
+                return true;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "메시지 저장 중 오류 발생 (RoomId: {RoomId}, SenderId: {SenderId})", message.RoomId, message.SenderId);
+                Log.Error(ex, "메시지 저장 중 오류 발생 (RoomId: {RoomId}, SenderId: {SenderId}, Guid: {Guid})",
+                    message.RoomId, message.SenderId, message.MessageGuid);
                 return false;
             }
         }

@@ -23,6 +23,9 @@
         // 내 메시지인지 구분하는 플래그 (DataTrigger용) 
         public bool IsMine {  get; set; }
 
+        // 중복 방지 및 메세지 식별용 고유 ID 
+        public string MessageGuid { get; set; } = string.Empty;
+
         // 시간 포맷팅 
         public string FomattedTime => SendTime.ToString("t");
         

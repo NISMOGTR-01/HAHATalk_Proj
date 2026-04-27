@@ -38,6 +38,10 @@ namespace HAHATalk.ViewModels
         // 메시지 목록 (실시간 반영) 
         public ObservableCollection<ChatMessage> Messages { get; set; } = new();
 
+        // 2026.04.22 
+        [ObservableProperty]
+        private bool _isWindowActive; // 창이 활성화 상태인지 체크 
+
 
         // 생성자 : 누구와의 채팅방인지 정보를 받음 
         public ChatRoomViewModel(
@@ -77,6 +81,7 @@ namespace HAHATalk.ViewModels
                 // 내 방 번호와 일치하는 메시지인지 확인
                 if (m.Message.RoomId == this.RoomId)
                 {
+                    // 내가 보낸 메시지가 아닐 때만 처리 (상대방 메시지 수신의 경우에만 해당) 
                     if (m.Message.SenderId != _userStore.CurrentUserEmail)
                     {
                         // UI 스레드에서 리스트에 추가
@@ -90,13 +95,21 @@ namespace HAHATalk.ViewModels
                                 SenderName = m.Message.SenderName,
                                 Message = m.Message.Message,
                                 SendTime = m.Message.SendTime,
+                                IsRead = IsWindowActive     // 내가 창을 보고 있으면 즉시 읽음 
                             };
 
                             Messages.Add(newMessage);
 
-                            // [읽음 처리 추가] 수신 즉시 서버와 상대방에게 알림
-                            await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
-                            await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+                            // Focus 로직 :
+                            if (IsWindowActive)
+                            {
+                                // [읽음 처리 추가] 수신 즉시 서버와 상대방에게 알림
+                                await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
+                                await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+
+                                newMessage.IsRead = true;
+                            }
+
                         });
                     }
                 }
@@ -109,10 +122,19 @@ namespace HAHATalk.ViewModels
                 {
                     App.Current.Dispatcher.Invoke(() =>
                     {
-                        foreach (var msg in Messages)
+                        for (int i = Messages.Count - 1; i >= 0; i--)
                         {
-                            msg.IsRead = true; // 실시간으로 '1' 제거
+                            if (Messages[i].IsMine && !Messages[i].IsRead)
+                            {
+                                Messages[i].IsRead = true;
+                            }
+                            else if (Messages[i].IsMine && Messages[i].IsRead)
+                            {
+                                // 이미 읽은 메시지를 만나면 그 이전 메시지들은 다 읽은 것이므로 중단 
+                                break;
+                            }
                         }
+
                     });
                 }
             });
@@ -126,7 +148,7 @@ namespace HAHATalk.ViewModels
                 var dbMessages = await _chatService.GetChatHistoryAsync(RoomId);
 
                 // 2. UI 스레드에서 컬렉션 업데이트
-                App.Current.Dispatcher.Invoke(async () =>
+                await App.Current.Dispatcher.Invoke(async () =>
                 {
                     Messages.Clear();
                     if (dbMessages != null)
@@ -147,11 +169,22 @@ namespace HAHATalk.ViewModels
                         }
                     }
 
-                    // [읽음 처리 추가] 히스토리 로드 후 서버에 읽음 보고 및 상대방 알림
-                    await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
-                    await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
-                    WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+                    // dbMessages 중에서 "상대방이 보낸 것"이고 "아직 안 읽은 상태"인 메시지가 하나라도 있는지 체크
+                    bool hasUnreadFromTarget = dbMessages?.Any(m => m.SenderId == _targetId && !m.IsRead) ?? false;
+
+                    // 내가 읽어야 할 메세지가 있을 때만 서버에서 '읽음' 보고 
+
+
+                    if (hasUnreadFromTarget)
+                    {
+                        // [읽음 처리 추가] 히스토리 로드 후 서버에 읽음 보고 및 상대방 알림
+                        await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
+                        await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+                        WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+                    }
+
                 });
+
             }
             catch (Exception ex)
             {
@@ -169,6 +202,7 @@ namespace HAHATalk.ViewModels
             // 가상의 전송 로직 (나중에 SignalR/API 연동 부분) 
             var myMsg = new ChatMessage
             {
+                MessageGuid = Guid.NewGuid().ToString(),
                 RoomId = RoomId,
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
@@ -176,14 +210,13 @@ namespace HAHATalk.ViewModels
                 SendTime = DateTime.Now,
                 IsMine = true,
                 IsRead = false,     // DB 컬럼 대응 
-                MessageType = 0     // 기본 텍스트 타입 
+                MessageType = 0,    // 기본 텍스트 타입 
+                SendState = (int)ChatMessage.MessageStatus.Success  // 
             };
 
             // UI에 즉시 추가 
             Messages.Add(myMsg);
-
             string currentInput = InputMessage;
-
             // 입력창 비우기 
             InputMessage = string.Empty;
 
@@ -213,10 +246,18 @@ namespace HAHATalk.ViewModels
 
                     await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
                 }
+                else
+                {
+                    // 서버에서 저장 실패 응답이 온 경우 
+                    myMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"전송 에러 : {ex.Message}");
+
+                // 네트워크 단절 등 예외 발생 시 상태를 '실패'로 변경 
+                myMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
             }
         }
 
@@ -272,6 +313,7 @@ namespace HAHATalk.ViewModels
             // Model 생성 
             var chatMessage = new ChatMessage
             {
+                MessageGuid = Guid.NewGuid().ToString(),
                 RoomId = RoomId,
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
@@ -333,9 +375,22 @@ namespace HAHATalk.ViewModels
             {
                 App.Current.Dispatcher.Invoke(async () =>
                 {
-                    // 2026.04.22 읽음 처리 통합
+                    // 서버에 신호를 보내기 전에, 현재 활성화된 창이라면 리스트의 메시지들을 즉시 읽음으로 처리 
+                    if (IsWindowActive)
+                    {
+                        // 방금 받은 메세지 뿐만 아니라 기존 리스트의 안 읽은 상대방 메시지도 즉시 업데이트 
+                        foreach (var msg in Messages.Where(m => !m.IsMine && !m.IsRead))
+                        {
+                            msg.IsRead = true;
+                        }
+                    }
+
+
+                    //
                     try
                     {
+                        // 비동기로 서버에 보고 (백그라운드 처리) 
+
                         await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
                         await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
                         WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
@@ -345,6 +400,83 @@ namespace HAHATalk.ViewModels
                         System.Diagnostics.Debug.WriteLine($"읽음 처리 중 에러: {ex.Message}");
                     }
                 });
+            }
+        }
+
+        // 창이 켜질 때 한꺼번에 읽음 처리하기 위한 메서드 
+        public async Task MarkAllReadAsync()
+        {
+            try
+            {
+                // _chatService와 _signalRService를 사용하여 읽음 처리 진행 
+                await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
+                await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+        }
+
+        // 2026.04.25 Add 
+        // [메세지 전송 재시도 커맨드] 
+        [RelayCommand]
+        private async Task RetrySendMessage(ChatMessage failedMsg)
+        {
+            if (failedMsg == null)
+            {
+                return;
+            }
+
+            if(string.IsNullOrEmpty(failedMsg.MessageGuid))
+            {
+                failedMsg.MessageGuid = Guid.NewGuid().ToString();
+            }
+
+            // 상태를 다시 '성공' 혹은 '전송 중'으로 변경 (UI에서 실패 문구 사라짐) 
+            failedMsg.SendState = (int)ChatMessage.MessageStatus.Success;
+
+            try
+            {
+                // 서버 저장 시도 
+                bool saveSuccess = await _chatService.SaveMessageAsync(failedMsg);
+
+                if(saveSuccess)
+                {
+                    // 리스트 업데이트 및 SignalR 전송 
+                    await _chatService.UpdateChatListAsync(failedMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);
+                    
+                    // 메세지 타입에 따른 분기 처리 
+                    if(failedMsg.MessageType == 1)
+                    {
+                        // 이미지는 파일 경로 정보를 포함하여 전송 
+                        //await _signalRService.sen
+                    }
+                    else
+                    {
+                        await _signalRService.SendMessageAsync(RoomId, TargetId, failedMsg.Message);
+                    }
+                }
+                else
+                {
+                    failedMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
+                }
+            }
+            catch (Exception ex)
+            {
+                failedMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
+            }
+        }
+
+        // 삭제 커맨드 (실패한 메시지가 보기 싫은 경우) 
+        [RelayCommand]
+        private void DeleteMessage(ChatMessage msg)
+        {
+            if (msg != null && Messages.Contains(msg))
+            {
+                Messages.Remove(msg);
+
             }
         }
     }
