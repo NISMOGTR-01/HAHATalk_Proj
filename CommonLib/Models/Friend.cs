@@ -1,14 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CommonLib.Models
 {
-    public class Friend
+    [ObservableObject]
+    public partial class Friend
     {
-        public string MyEmail {  get; set; }
-        public string TargetEmail {  get; set; }
-        public string FriendName {  get; set; }
-        public string StatusMsg {  get; set; }
+        [ObservableProperty]
+        public string _myEmail  = string.Empty;
+
+        [ObservableProperty]
+        private string _targetEmail = string.Empty;
+
+        [ObservableProperty]  
+        private string _friendName = string.Empty;
+
+        [ObservableProperty]
+        private string _statusMsg = string.Empty;
+
+        [ObservableProperty]
+        private string? _profileImg;
     }
 }

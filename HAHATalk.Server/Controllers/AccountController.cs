@@ -171,5 +171,66 @@ namespace HAHATalk.Server.Controllers
             return Ok(email);
         }
 
+        // 프로필 이미지 업로드 및 정보 업데이트 (2026.04.27)
+        [HttpPost("upload-profile")]
+        public async Task<IActionResult> UploadProfile([FromForm] IFormFile? file, [FromForm] string email, [FromForm] string? statusMsg)
+        {
+            // 파일과 상태 메세지 둘 다 없는 경우 체크 
+            if ((file == null || file.Length == 0) && string.IsNullOrEmpty(statusMsg))
+            {
+                return BadRequest("변경할 데이터가 없습니다.");
+            }
+
+            try
+            {
+                string? dbPath = null;
+
+                // 파일이 있는 경우 물리적 저장 처리 
+                if(file != null && file.Length > 0)
+                {
+                    // 저장폴더 설정 (wwwroot/uploads/profiles)
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+
+                    if(!Directory.Exists(uploadsFolder))
+                    {
+                        // 폴더가 없는 경우 업로드 폴더를 생성함 
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    // 파일명 중복 방지 (GUID + 확장자) 
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    // DB에 저장할 상대 경로 
+                    dbPath = $"/uploads/profiles/{fileName}";
+                }
+
+                // Repository 호출 (이미지 경로 / 상태 메세지 업데이트) 
+                var result = await _accountRepository.MSSQL_UpdateProfileImageAsync(email, dbPath, statusMsg);
+
+                if(result)
+                {
+                    Log.Information("[ProfileUpdate] 성공: {Email}, Path: {Path}", email, dbPath);
+                    return Ok(new
+                    {
+                       IsSuccess = true, 
+                       ImageUrl = dbPath, 
+                       StatusMsg = statusMsg
+                    });
+                }
+
+                return BadRequest("프로필 정보 업데이트 실패");
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "[ProfileUpdate] 예외 발생 : {Email}", email);
+                return StatusCode(500, "서버 업로드 오류");
+            }
+        }
     }
 }

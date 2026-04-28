@@ -44,19 +44,28 @@ namespace HAHATalk.Server.Repository
                 using var db = CreateConnection();
                 // 단일 문자열 값만 가져올 때도 ExecuteScalar가 편합니다.
                 var email = await db.ExecuteScalarAsync<string>(query, new { cell_phone = phoneNumber });
-                return email ?? "0";
+                
+                // 0 대신 null을 반환하여 string? 취지에 맞게 변경 
+                return email;
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "[Account] 계정 찾기 중 오류 발생 (Phone: {Phone})", phoneNumber);
-                return "0";
+                return null;
             }
         }
 
         public async Task<Account?> MSSQL_GetAccountByEmailAsync(string email)
         {
             // DB 컬럼명과 모델 프로퍼티명을 맞추기 위해 Alias 사용 (pwd -> Pwd)
-            const string query = "SELECT email AS Email, nickname AS Nickname, pwd AS Pwd FROM account WHERE email = @email";
+            const string query = @"
+                SELECT email AS Email, 
+                    nickname AS Nickname, 
+                    pwd AS Pwd, 
+                    profile_Img AS ProfileImg, 
+                    status_Msg AS StatusMsg
+                FROM account 
+                WHERE email = @email";
 
             try
             {
@@ -121,6 +130,9 @@ namespace HAHATalk.Server.Repository
             string targetPwd = !string.IsNullOrEmpty(changPwd) ? changPwd : account.Pwd;
             string hashedPwd = SecurityHelper.HashPassword(targetPwd);
 
+            // 저장할 때도 하이픈을 제거하여 dataformat 통일 
+            string clearnPhone = account.CellPhone?.Replace("-", "") ?? "";
+
             const string query = @"
                 INSERT INTO account (pwd, email, nickname, cell_phone)
                 VALUES (@hashedPwd, @Email, @Nickname, @CellPhone);";
@@ -134,7 +146,7 @@ namespace HAHATalk.Server.Repository
                     hashedPwd,
                     account.Email,
                     account.Nickname,
-                    account.CellPhone
+                    CellPhone = clearnPhone
                 });
 
                 if (rows > 0)
@@ -146,6 +158,37 @@ namespace HAHATalk.Server.Repository
             {
                 Log.Error(ex, "[Account] 회원가입 처리 중 오류 발생 (Email: {Email})", account.Email);
                 return 0;
+            }
+        }
+
+        // 프로필 이미지와 상태 메세지를 통합 관리하는 메서드 
+        public async Task<bool> MSSQL_UpdateProfileImageAsync(string? email, string? imagePath, string? statusMsg)
+        {
+            // imagePath는 서버에 저장된 상대경로 (:updalods/profiles/556.jpg
+            const string query = @"
+                UPDATE account 
+                SET profile_img = ISNULL(@imagePath, profile_img), 
+                    status_msg = ISNULL(@statusMsg, status_msg)
+                WHERE email = @email
+                ";
+
+            try
+            {
+                using var db = CreateConnection();
+                // dapper를 이용해 파라미터 mapping 
+                int rows = await db.ExecuteAsync(query, new { email, imagePath, statusMsg });
+
+                if(rows > 0)
+                {
+                    Log.Information("[Account] 프로필 정보 업데이트 완료 (Email : {Email}", email);
+                }
+
+                return rows > 0;
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "[Account] 프로필 업데이트 중 예외 발생 (Email : {Email|}", email);
+                return false;
             }
         }
     }

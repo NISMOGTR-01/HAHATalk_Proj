@@ -1,14 +1,18 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommonLib.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommonLib.Models;
-
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 using HAHATalk.Services;
+using HAHATalk.Stores;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.Xml;
 using System.Text;
-using System.Windows;
-using HAHATalk.Stores;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
 
 namespace HAHATalk.ViewModels
 {
@@ -70,7 +74,13 @@ namespace HAHATalk.ViewModels
             StatusMessage = friend.StatusMsg;
             TargetEmail = friend.TargetEmail;
 
-            ProfileImage = "pack://application:,,,/Assets/basic_Profile.png";
+            // 2026.04.28 계정의 프로필 이미지로 가져오도록 
+           
+            if (!string.IsNullOrEmpty(friend.ProfileImg))
+            {
+                // 리스트에서 잘 나오는 그 경로 형식을 그대로 넣어줍니다.
+                this.ProfileImage = friend.ProfileImg;
+            }
             BackgroundImage = "pack://application:,,,/Assets/default_background.png";
         }
 
@@ -190,6 +200,52 @@ namespace HAHATalk.ViewModels
         {
             ValidatingDict.Clear();
             ValidationText = "";
+        }
+
+        [RelayCommand]
+        private async Task EditProfile()
+        {
+            // 1. 내 프로필인지 체크
+            if (!IsMe) return;
+
+            // 2. 프로필 편집 창 띄우기 (현재 값들을 인자로 전달)
+            bool? result = _windowManager.ShowProfileEdit(UserName, StatusMessage, ProfileImage);
+
+            // 3. [확인] 버튼을 눌러서 닫힌 경우 (서버 저장 성공 시)
+            if (result == true)
+            {
+                // 서버에서 최신 정보 다시 가져오기 
+                var updatedAccount = await _accountService.GetAccountAsnyc(_userStore.CurrentUserEmail);
+
+                if (updatedAccount != null)
+                {
+                    // 상세창 UI 프로퍼티 업데이트 
+                    UserName = updatedAccount.Nickname;
+                    StatusMessage = updatedAccount.StatusMsg;
+
+                    if (!string.IsNullOrEmpty(updatedAccount.ProfileImg))
+                    {
+                        string baseUrl = "https://localhost:7203";
+                        string fullPath = updatedAccount.ProfileImg.StartsWith("http")
+                            ? updatedAccount.ProfileImg
+                            : $"{baseUrl}{updatedAccount.ProfileImg}";
+
+                        // 캐시 방지 틱 추가하여 이미지 즉시 갱신
+                        ProfileImage = $"{fullPath}?v={DateTime.Now.Ticks}";
+                    }
+
+                    // ✅ 오직 '확인'을 눌러 성공했을 때만 다른 화면(친구 목록 등)에 알림을 쏩니다.
+                    WeakReferenceMessenger.Default.Send(new MyProfileChangedMessage());
+                }
+            }
+            // 4. [취소] 버튼을 누르거나 창을 그냥 닫은 경우
+            else
+            {
+                // 아무 작업도 하지 않습니다. 
+                // 이렇게 하면 편집 창에서 설령 사진을 골랐더라도, '확인'을 누르지 않았다면
+                // 상세 창과 친구 목록 창의 데이터는 그대로 유지됩니다. ㅋ
+                System.Diagnostics.Debug.WriteLine("프로필 편집이 취소되었습니다.");
+            }
         }
     }
 }

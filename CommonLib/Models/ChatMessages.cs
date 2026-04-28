@@ -59,6 +59,18 @@ namespace CommonLib.Models
         // UI 바인딩용 가독성 속성 
         public MessageStatus Status => (MessageStatus)SendState;
 
+        // 2026.04.27 전송 중일 때 흐리게 / 성공 or 실패시 진하게 
+        public double Opacity => Status == MessageStatus.Sending ? 0.6 : 1.0;
+
+        // 전송 중일 때만 로딩 스피너 활성화 
+        public bool IsLoading => Status == MessageStatus.Sending;
+
+        // 전송 실패했을 때만 재시도 버튼 노출 
+        public bool IsRetryVisible => Status == MessageStatus.Fail;
+
+        // 전송 성공했을 때만 읽음 숫자(1) 노출 가능 
+        public bool IsStatusSucess => Status == MessageStatus.Success;
+
         // 이미지 메시지 인지 여부를 즉시 판단하는 읽기 전용속성 
         public bool IsImage => MessageType == 1 && !string.IsNullOrEmpty(FilePath);
 

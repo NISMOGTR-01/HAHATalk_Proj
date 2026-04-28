@@ -10,4 +10,7 @@ namespace HAHATalk.Messages
 
     // 채팅 목록 화면을 갱신해야 할 때 사용하는 메신저 티켓 
     public record RefreshChatListMessage();
+
+    // 메세지 클래스 (내 프로필이 바뀌었다는 빈클래스) 2026.04.28 
+    public record MyProfileChangedMessage();
 }

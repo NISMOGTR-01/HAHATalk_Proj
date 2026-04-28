@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 
 namespace HAHATalk.ViewModels
 {
@@ -64,6 +66,12 @@ namespace HAHATalk.ViewModels
             // 내 카톡 프로필 초기화 (로그인 정보 기반) 
             InitializeMyProfile();
 
+            WeakReferenceMessenger.Default.Register<MyProfileChangedMessage>(this, (r, m) =>
+            {
+                // 방송이 들리면 내 정보를 새로고침하는 메서드 호출 
+                App.Current.Dispatcher.Invoke(async () => await RefreshMyInfo());
+            });
+
             _ = InitializeAsync();
         }
         
@@ -80,8 +88,11 @@ namespace HAHATalk.ViewModels
             {
                 FriendName = _userStore.CurrentUserNickname,
                 TargetEmail = _userStore.CurrentUserId,
-                StatusMsg = "오늘도 화이팅!"
+                StatusMsg = "오늘도 화이팅!",
+                ProfileImg = _userStore.CurrentUserProfile
             };
+
+            _ = RefreshMyInfo();
         }
 
 
@@ -274,6 +285,36 @@ namespace HAHATalk.ViewModels
         private void Search()
         {
 
+        }
+
+        private async Task RefreshMyInfo()
+        {
+            // 서버에서 내 최신 정보를 다시 가져와서 
+            // 친구 목록 상단에 있는 '와타시'의 프로퍼티들을 갱신 
+            var me = await _accountService.GetAccountAsnyc(_userStore.CurrentUserEmail);
+
+            if(me != null)
+            {
+                // MyProfile 의 속성 갱신 
+                MyProfile.FriendName = me.Nickname;
+                MyProfile.StatusMsg = me.StatusMsg;
+
+                // 이미지 경로 처리 (BaseUrl + 캐시 방지 틱 추가) 
+                if(!string.IsNullOrEmpty(me.ProfileImg))
+                {
+                    string baseUrl = "https://localhost:7203";
+                    string fullPath = me.ProfileImg.StartsWith("https")
+                        ? me.ProfileImg
+                        : $"{baseUrl}{me.ProfileImg}";
+
+                    // 틱값을 붙여줘야 목록의 이미지도 '새로고침'
+                    MyProfile.ProfileImg = $"{fullPath}?v={DateTime.Now.Ticks}";
+
+                }
+
+                // 만약 MyProfile 자체가 바뀐걸 UI가 모르는 경우 강제로 신호를 전달
+                // // 
+            }
         }
     }
 }

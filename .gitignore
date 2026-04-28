@@ -51,3 +51,4 @@ Settings.settings
 bin/ 
 obj/ 
 .vs/ 
+wwwroot/

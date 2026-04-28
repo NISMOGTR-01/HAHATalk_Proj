@@ -15,13 +15,17 @@ namespace HAHATalk.Services
         private readonly Dictionary<string, ChatRoomWindow> _chatWindows = new();
         
         private readonly IChatService _chatService; // 2026.04.10 ChatService 추가 
+        private readonly IAccountService _accountService;   // 2026.04.28 Add 
         private readonly UserStore _userStore;
         private readonly ISignalRService _signalRService;
 
-        public WindowManager(IChatService chatService, UserStore userStore,
+        public WindowManager(IChatService chatService, 
+            IAccountService accountService,
+            UserStore userStore,
             ISignalRService signalRService)
         {
             _chatService = chatService;
+            _accountService = accountService;
             _userStore = userStore;
             _signalRService = signalRService;
         }
@@ -78,5 +82,28 @@ namespace HAHATalk.Services
             throw new NotImplementedException();
         }
 
+        // 프로필 편집 창 띄우기 
+        public bool? ShowProfileEdit(string currentName, string currentStatus, string currentProfileImg)
+        {
+            // 창 생성 
+            var window = new ProfileEditWindow();
+
+            // ViewModel 생성 및 초기 데이터 주입 
+            var vm = new ProfileEditViewModel(
+                _accountService,
+                _userStore,
+                currentName, 
+                currentStatus,
+                currentProfileImg
+                );
+
+            // View 및 ViewModel 결합 
+            window.DataContext = vm;
+
+            // 모달 창으로 띄우기 (Owner 설정을 해야 메인창 중앙에 뜸) 
+            window.Owner = Application.Current.MainWindow;
+
+            return window.ShowDialog();
+        }
     }
 }

@@ -52,16 +52,29 @@
 
             <StackPanel VerticalAlignment="Bottom" Margin="0 0 0 40">
                 <Separator Background="#55FFFFFF" Margin="30 0 30 20"/>
-                <UniformGrid Columns="3">
+                <UniformGrid Columns="2">
                     <Button Style="{StaticResource ActionButtonStyle}" 
                             Command="{Binding StartChatCommand}">
                         <StackPanel>
                             <Path Data="{StaticResource IconChat}" Fill="White" 
-                                  HorizontalAlignment="Center"/>
-                            <TextBlock Text="1:1 채팅" Foreground="White"
-                                       FontSize="12" Margin="0 5 0 0"/>
-                        </StackPanel>    
+                                  HorizontalAlignment="Center" Width="20" Height="20"
+                                  Stretch="Uniform"/>
+                            <TextBlock Text="나와의 채팅" Foreground="White"
+                                       FontSize="12" Margin="0 8 0 0"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>                        
                     </Button>
+
+                    <Button Style="{StaticResource ActionButtonStyle}"
+                            Command="{Binding EditProfileCommand}">
+                        <StackPanel>
+                            <Path   Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" 
+                                    Fill="White" HorizontalAlignment="Center" Width="20" Height="20" Stretch="Uniform"/>
+                            <TextBlock Text="프로필 편집" Foreground="White"
+                                        FontSize="12" Margin="0 8 0 0" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    
                 </UniformGrid>
             </StackPanel>
         </Grid>

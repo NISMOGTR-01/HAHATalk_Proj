@@ -68,7 +68,7 @@
 
                 <Ellipse Width="55" Height="55" VerticalAlignment="Center">
                     <Ellipse.Fill>
-                        <ImageBrush ImageSource="/Assets/basic_Profile.png" Stretch="UniformToFill"/>
+                        <ImageBrush ImageSource="{Binding MyProfile.ProfileImg, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" Stretch="UniformToFill"/>
                     </Ellipse.Fill>
                 </Ellipse>
 
@@ -92,8 +92,8 @@
                             <Grid Margin="0,0,0,12" Background="Transparent" Cursor="Hand">
                                 <Grid.InputBindings>
                                     <MouseBinding MouseAction="LeftClick"
-                                                  Command="{Binding DataContext.OpenProfileCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  CommandParameter="{Binding}"/>
+                                  Command="{Binding DataContext.OpenProfileCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                  CommandParameter="{Binding}"/>
                                 </Grid.InputBindings>
 
                                 <Grid.ColumnDefinitions>
@@ -101,14 +101,17 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Ellipse Width="42" Height="42" Fill="#DAEAF1"/>
-                                <fa6:SvgAwesome Icon="Solid_User" Width="16" PrimaryColor="White" 
-                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Width="42" Height="42" VerticalAlignment="Center">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{Binding ProfileImg, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" 
+                                    Stretch="UniformToFill"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
                                     <TextBlock Text="{Binding FriendName}" FontSize="14" FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding StatusMsg}" FontSize="11" Foreground="Gray" 
-                                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>

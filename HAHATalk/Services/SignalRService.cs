@@ -33,7 +33,7 @@ namespace HAHATalk.Services
                     // 필요 시 AccessToken 등을 헤더에 담을 수 있습니다.
                     // options.AccessTokenProvider = () => Task.FromResult(_userStore.Token);
                 })
-                .WithAutomaticReconnect() // 자동 재연결 활성화!
+               .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) }) // 재연결 간격 구체화
                 .Build();
 
             // 서버에서 ChatMessageDto 객체 하나를 던질 경우를 대비한 리스너 
@@ -49,17 +49,12 @@ namespace HAHATalk.Services
                 });
             });
 
-            // [수정!!!] 기존 문자열 두 개 방식 리스너 (하위 호환성 유지)
-            _connection.On<string, string>("ReceiveMessageLegacy", (senderEmail, message) =>
-            {
-                MessageReceived?.Invoke(senderEmail, message);
-            });
+          
 
             // 친구 추가 알림 수신 리스터 (서버의 SendAsync("UpdateChatList")를 받는다) 
             _connection.On("UpdateChatList", () =>
             {
-                System.Diagnostics.Debug.WriteLine("SignalR: 상대방이 나를 친구 추가하여 친구목록을 갱신합니다.");
-
+                
                 // 메신저를 통해 ChatListControlViewModel에게 즉시 새로고침 신호 전송 
                 // UI 스레드에서 돌아가도록 처리 
                 App.Current.Dispatcher.Invoke(() =>
@@ -71,8 +66,11 @@ namespace HAHATalk.Services
             // 서버에서 "누군가 메세지를 읽었음"신호를 보낼때 
             _connection.On<string>("ReceiveReadReceipt", (roomId) =>
             {
-                // Messenger를 통해 ChatRoomViewModel에 알림 
-                WeakReferenceMessenger.Default.Send(new MessagesReadMessage(roomId));
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    // Messenger를 통해 ChatRoomViewModel에 알림 
+                    WeakReferenceMessenger.Default.Send(new MessagesReadMessage(roomId));
+                });              
             });
         }
 
@@ -109,48 +107,36 @@ namespace HAHATalk.Services
             }
         }
 
-        // 메시지 전송 로직 
-        public async Task SendMessageAsync(string roomId, string targetEmail, string message)
+        // 연결 보장 메서드 (내부용) 
+        private async Task EnsureConnected()
         {
-            if(_connection.State != HubConnectionState.Connected)
+            if(_connection.State == HubConnectionState.Disconnected)
             {
-                // 연결이 끊긴 경우 다시 시도 
                 await ConnectAsync();
-            }
-            try
-            {
-                // roomId 추가 
-                // 서버의 ChatHub.SendMessage(roomId, senderId, targetId, message) 호출
-                //
-                await _connection.InvokeAsync("SendMessage", 
-                    roomId,
-                    _userStore.CurrentUserEmail, 
-                    targetEmail, 
-                    message);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine
-                (
-                    $"Signal R Send Error : {ex.Message}"
-                );
             }
         }
 
-        // 채팅방 입장 
-        public async Task JoinRoom(string roomId)
+        // 메시지 전송 로직 
+        public async Task SendMessageAsync(string roomId, string targetEmail, string message)
         {
-            if (_connection.State != HubConnectionState.Connected)
-            {
-                // 연결이 안된 경우 연결 부터??
-                await ConnectAsync();
-            }
-
+            await EnsureConnected();
             try
             {
-                // 서버 ChatHub에 있는 public async Task JoinRoom(string roomId) 호출 
+                await _connection.InvokeAsync("SendMessage", roomId, _userStore.CurrentUserEmail, targetEmail, message);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SignalR Send Error: {ex.Message}");
+                throw; // ViewModel에서 전송 실패(Fail) 상태를 처리할 수 있도록 throw 권장
+            }
+        }
+
+        public async Task JoinRoom(string roomId)
+        {
+            await EnsureConnected();
+            try
+            {
                 await _connection.InvokeAsync("JoinRoom", roomId);
-                System.Diagnostics.Debug.WriteLine($"SignalR: Joined Room {roomId}");
             }
             catch (Exception ex)
             {
@@ -158,17 +144,16 @@ namespace HAHATalk.Services
             }
         }
 
-        // 메세지 읽음 알리는 메서드 
         public async Task SendReadReceiptAsync(string roomId, string targetId)
         {
-            if(_connection.State != HubConnectionState.Connected)
+            // 읽음 신호는 실패해도 채팅 흐름에 치명적이지 않으므로 단순 체크만
+            if (_connection.State == HubConnectionState.Connected)
             {
                 try
                 {
-                    // 서버 Hub의 SendReadReceipt 메서드 호출 
                     await _connection.InvokeAsync("SendReadReceipt", roomId, targetId);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"읽음 신호 전송 실패: {ex.Message}");
                 }

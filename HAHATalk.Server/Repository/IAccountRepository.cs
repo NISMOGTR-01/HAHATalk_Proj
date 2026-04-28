@@ -22,5 +22,8 @@ namespace HAHATalk.Server.Repository
 
         // 이메일로 상세 정보 가져오기 
         Task<Account?> MSSQL_GetAccountByEmailAsync(string email);
+
+        // 프로필 이미지 경로 업데이트 
+        Task<bool> MSSQL_UpdateProfileImageAsync(string? email, string? imagePath, string? statusMsg);
     }
 }

@@ -11,5 +11,8 @@ namespace HAHATalk.Services
 
         // (옵션) 모든 창 닫기 등 확장기능 
         void CloseAll();
+
+        // 프로필 편집 창을 띄우는 메소드 
+        bool? ShowProfileEdit(string currentName, string currentStatus, string currentProfileImg);
     }
 }

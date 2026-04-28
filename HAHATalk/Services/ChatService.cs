@@ -33,8 +33,9 @@ namespace HAHATalk.Services
             {
                 return await _httpClient.GetFromJsonAsync<List<ChatMessage>>($"{BaseUrl}/history/{roomId}") ?? new();
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"히스토리 로드 실패: {ex.Message}");
                 return new List<ChatMessage>();
             }
         }
@@ -53,8 +54,17 @@ namespace HAHATalk.Services
 
         public async Task<bool> SaveMessageAsync(ChatMessage message)
         {
-            var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/save", message);
-            return response.IsSuccessStatusCode;
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/save", message);
+                return response.IsSuccessStatusCode;
+
+            }
+            catch(Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"메세지 저장 에러 : {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<bool> UpdateChatListAsync(ChatMessage message,
@@ -99,8 +109,21 @@ namespace HAHATalk.Services
 
         public async Task MarkAsReadAsync(string roomId, string userId)
         {
-            var request = new {RoomId = roomId, UserId = userId};
-            await _httpClient.PostAsJsonAsync("api/chat/mark-read", request);
+            try
+            {
+                var request = new { RoomId = roomId, UserId = userId };
+                // BaseUrl 변수를 사용하여 경로 일관성 유지 
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/mark-read", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"읽음 처리 서버 응답 에러 : {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"읽음 처리 통신 에러: {ex.Message}");
+            }
         }
     }
 }

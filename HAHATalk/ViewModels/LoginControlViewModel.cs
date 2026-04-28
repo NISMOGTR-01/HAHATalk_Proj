@@ -100,6 +100,10 @@ namespace HAHATalk.ViewModels
                     _userStore.CurrentUserId = account.Email;
                     _userStore.CurrentUserNickname = account.Nickname;
 
+                    // 프로필 이미지, 대화명 추가 
+                    _userStore.CurrentUserProfile = account.ProfileImg;
+                    _userStore.CurrentUserStatusMsg = account.StatusMsg;
+
                     // 나머지 후속 작업(Signal R  및 로컬 데이터 동기화)
                     ValidationText = "실시간 통신 연결 중입니다...";
 

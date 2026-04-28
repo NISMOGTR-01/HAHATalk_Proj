@@ -133,6 +133,13 @@ namespace HAHATalk.Server.Repository
             try
             {
                 using var db = CreateConnection();
+
+                // 트랜잭션을 사용하여 두 작업을 원자적으로 처리
+                if (db.State != ConnectionState.Open) db.Open();
+                
+                using var trans = db.BeginTransaction();
+
+
                 int rows = await db.ExecuteAsync(query, new
                 {
                     roomId = message.RoomId,
@@ -142,7 +149,10 @@ namespace HAHATalk.Server.Repository
                     myNickname,
                     msgText = message.Message,
                     lastTime = message.SendTime
-                });
+                }, transaction: trans);
+
+                trans.Commit();
+
                 return rows > 0;
             }
             catch (Exception ex)

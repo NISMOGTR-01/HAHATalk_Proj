@@ -75,7 +75,8 @@ namespace HAHATalk.ViewModels
             // 비동기로 초기 메세지 로드 (Fire and Forget)
             Task.Run(async () => await LoadMessagesFromDb());
 
-            // 2024.04.22 서버에서 SignalR로 메세지가 오면 Messenger가 이 신호를 낚아 챈다 
+            // 2024.04.22 서버에서 SignalR로 메세지가 오면 Messenger가 이 신호를 낚아 챈다
+            // 상대방이 내가 보낸 메세지를 읽었을때 
             WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
             {
                 // 내 방 번호와 일치하는 메시지인지 확인
@@ -375,30 +376,28 @@ namespace HAHATalk.ViewModels
             {
                 App.Current.Dispatcher.Invoke(async () =>
                 {
-                    // 서버에 신호를 보내기 전에, 현재 활성화된 창이라면 리스트의 메시지들을 즉시 읽음으로 처리 
+                    // 내가 채팅창을 바라고 보고 있는 경우 UI 업데이트 
                     if (IsWindowActive)
                     {
-                        // 방금 받은 메세지 뿐만 아니라 기존 리스트의 안 읽은 상대방 메시지도 즉시 업데이트 
+                        // 이미 리스트에 있는 상대방 메세지들 읽음 처리  
                         foreach (var msg in Messages.Where(m => !m.IsMine && !m.IsRead))
                         {
                             msg.IsRead = true;
                         }
-                    }
+                        
+                        try
+                        {
+                            // 서버에 내가 메세지 읽었음을 알림 (상대방 1도 사라지게 함) 
 
-
-                    //
-                    try
-                    {
-                        // 비동기로 서버에 보고 (백그라운드 처리) 
-
-                        await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
-                        await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
-                        WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"읽음 처리 중 에러: {ex.Message}");
-                    }
+                            await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
+                            await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+                            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"읽음 처리 중 에러: {ex.Message}");
+                        }
+                    }                  
                 });
             }
         }
@@ -408,13 +407,22 @@ namespace HAHATalk.ViewModels
         {
             try
             {
+                // UI에서 상대방 메세지만 즉시 읽음 처리 
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    foreach(var msg in Messages.Where(m => !m.IsMine && !m.IsRead))
+                    {
+                        msg.IsRead = true;
+                    }
+                });
+
                 // _chatService와 _signalRService를 사용하여 읽음 처리 진행 
                 await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
                 await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
             }
             catch (Exception ex)
             {
-
+                System.Diagnostics.Debug.WriteLine($"MarkAllRead 에러: {ex.Message}");
             }
 
         }

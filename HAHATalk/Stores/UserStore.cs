@@ -21,6 +21,14 @@ namespace HAHATalk.Stores
         [ObservableProperty]
         private string _currentUserNickname = string.Empty;
 
+        // 내 프로필 이미지 경로 
+        [ObservableProperty]
+        private string? _currentUserProfile;
+
+        // 내 상태 메시지
+        [ObservableProperty]
+        private string? _currentUserStatusMsg;
+
         // 아직 읽지 않은 채팅 수 총합 
         [ObservableProperty]
         private int _totalUnreadCount;

@@ -35,6 +35,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi(); // 개발 환경에서 API 문서 활성화
 }
 
+// 이미지 경로로 접근 가능 
+app.UseStaticFiles();
+app.UseRouting();
+
 //app.UseHttpsRedirection();
 app.UseAuthorization();
 

@@ -24,5 +24,9 @@ namespace HAHATalk.Services
 
         // 계정찾기 비동기 메서드 
         Task<string?> FindAccountAsync(Account account);
+
+        // 프로필 정보 (이미지 파일 경로 및 상태 메세지) 업데이트 
+        // 이미지 경로는 로컬 파일 경로를 받아 서비스 내부에서 스트림으로 변환 처리 
+        Task<bool> UpdateProfileAsync(string email, string? filePath, string? statusMsg);
     }
 }

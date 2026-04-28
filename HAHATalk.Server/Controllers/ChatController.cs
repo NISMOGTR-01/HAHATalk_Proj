@@ -73,6 +73,7 @@ namespace HAHATalk.Server.Controllers
                     FilePath = data.FilePath,
                     FileName = data.FileName,
                     IsRead = false,
+                    MessageGuid = data.MessageGuid,
                 };
 
                 // Repository 를 통해서 저장 
@@ -148,7 +149,7 @@ namespace HAHATalk.Server.Controllers
         public async Task<IActionResult> MarkAsRead([FromBody] MarkReadRequestDto request)
         {
             //
-            if (request == null)
+            if (request == null || string.IsNullOrEmpty(request.RoomId))
                 return BadRequest();
 
             try
