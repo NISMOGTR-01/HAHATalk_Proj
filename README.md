@@ -15,7 +15,7 @@
 ---
 
 ## 🛠 Tech Stack
-* **Language**: C# (.NET 8)
+* **Language**: C# (.NET 10)
 * **Framework**: WPF (Windows Presentation Foundation)
 * **Real-time**: **ASP.NET Core SignalR** (실시간 양방향 통신 허브 설계)
 * **Pattern**: MVVM (CommunityToolkit.Mvvm)
