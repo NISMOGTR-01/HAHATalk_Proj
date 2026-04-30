@@ -1,10 +1,17 @@
 using HAHATalk.Server.Hubs;
-using Microsoft.EntityFrameworkCore;
-
 using HAHATalk.Server.Repository;
-
+using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .CreateLogger();
+
+builder.Host.UseSerilog(); // 🔥 [중요] 앱 호스트에서 Serilog를 쓰겠다고 선언
 
 // Add services to the container.
 

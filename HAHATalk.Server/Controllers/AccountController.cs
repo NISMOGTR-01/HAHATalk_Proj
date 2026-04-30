@@ -45,7 +45,15 @@ namespace HAHATalk.Server.Controllers
                     {
                         user.Pwd = string.Empty; // 보안상 비밀번호 비움
 
-                        Log.Information("[Login Success] Email: {Email}", loginInfo.Email);
+                        // 🔥 서버 콘솔에 강조된 로그 출력
+                        Log.Information("\n" +
+                            "==========================================================\n" +
+                            " [LOGIN SUCCESS] 유저 로그인 성공\n" +
+                            " 📧 Email    : {Email}\n" +
+                            " 👤 Nickname : {Nickname}\n" +
+                            " ⏰ Time     : {Time}\n" +
+                            "==========================================================",
+                            loginInfo.Email, user.Nickname, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
                         return Ok(new LoginResponseDto
                         {

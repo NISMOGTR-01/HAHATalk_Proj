@@ -47,12 +47,14 @@ namespace HAHATalk.Views
                 {
                     viewModel.IsWindowActive = true;
 
-                    // 창이 활성화되는 순간 안 읽은 메세지가 있다면 즉시 읽음 처리 
-                    var unreadMessages = viewModel.Messages.Where(x => !x.IsRead).ToList();
+                    // 🔥 수정: '내가 받은 메시지(!IsMine)' 중에서 '안 읽은 것(!IsRead)'만 골라야 합니다.
+                    var unreadFromPartner = viewModel.Messages
+                        .Where(x => !x.IsMine && !x.IsRead)
+                        .ToList();
 
-                    if(unreadMessages.Any())
+                    if (unreadFromPartner.Any())
                     {
-                        foreach(var msg in unreadMessages)
+                        foreach(var msg in unreadFromPartner)
                         {
                             msg.IsRead = true;
                         }

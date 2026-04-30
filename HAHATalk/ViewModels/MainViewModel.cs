@@ -7,6 +7,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Text;
 using WPFLib.Controls;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HAHATalk.ViewModels
 {
@@ -15,6 +16,8 @@ namespace HAHATalk.ViewModels
     {
         //2026.03.18 navigationStore 변수로 추가 
         private readonly MainNavigationStore _navigationStore;
+        // 2026.04.29 서비스 제공자 필드추가 
+        private readonly IServiceProvider _serviceProvider; 
 
         [ObservableProperty]
         private INotifyPropertyChanged _currentViewModel = default!;
@@ -32,10 +35,12 @@ namespace HAHATalk.ViewModels
         private UserStore _userStore;
 
         public MainViewModel(MainNavigationStore mainNavigationStore, 
-            UserStore userStore)
+            UserStore userStore,
+            IServiceProvider serviceProvider)
         {
             _navigationStore = mainNavigationStore;
             _userStore = userStore; // XAML에서 UserStore.TotalUnreadCount에 접근 가능 
+            _serviceProvider = serviceProvider;
 
             // Store 이벤트 구독 
             _navigationStore.CurrentViewModelChanged += CurrentViewModelChanged;
@@ -44,14 +49,7 @@ namespace HAHATalk.ViewModels
             // 앱 시작할때 초기화면 설정 (로그인) 
             NavigateToLogin();
 
-            /*
-            mainNavigationStore.CurrentViewModelChanged += CurrentViewModelChanged;
-            mainNavigationStore.SlideTypeChanged += SlideTypeChanged;
-            // 처음에 시작하는 메인 화면은 Login화면으로 할당 
-            mainNavigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(LoginControlViewModel))!;
-            // 생성자를 로그인 
-            //_currentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(LoginControlViewModel))!;
-            */
+            
         }
 
         private void CurrentViewModelChanged(INotifyPropertyChanged viewModel)
@@ -87,7 +85,7 @@ namespace HAHATalk.ViewModels
         private void NavigateToLogin()
         {
             _navigationStore.SlideType = SlideType.RightToLeft;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(LoginControlViewModel))!;
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>(); 
         }
 
 
@@ -95,14 +93,14 @@ namespace HAHATalk.ViewModels
         public void NavigateToFriendList()
         {
             _navigationStore.SlideType = SlideType.LeftToRight;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(FriendListControlViewModel))!;
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<FriendListControlViewModel>();
         }
 
         [RelayCommand]
         public void NavigateToChatList()
         {
             _navigationStore.SlideType = SlideType.RightToLeft;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(ChatListControlViewModel))!;
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<ChatListControlViewModel>(); 
         }
 
 
@@ -117,7 +115,7 @@ namespace HAHATalk.ViewModels
         public void ToChangePwd()
         {
             _navigationStore.SlideType = SlideType.RightToLeft;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(ChangePwdControlViewModel))!;
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<ChangePwdControlViewModel>();
             //CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(ChangePwdControlViewModel))!;
         }
 
@@ -125,7 +123,7 @@ namespace HAHATalk.ViewModels
         public void ToSignup()
         {
             _navigationStore.SlideType = SlideType.RightToLeft;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(SignupControlViewModel))!;
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<SignupControlViewModel>();
             //CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(SignupControlViewModel))!;
         }
 
@@ -135,7 +133,7 @@ namespace HAHATalk.ViewModels
         {
             _navigationStore.SlideType = SlideType.LeftToRight;
 
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)App.Current.Services.GetService(typeof(LoginControlViewModel));
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>();
         }
 
         [RelayCommand]

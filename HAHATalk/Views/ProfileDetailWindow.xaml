@@ -54,12 +54,13 @@
                 <Separator Background="#55FFFFFF" Margin="30 0 30 20"/>
                 <UniformGrid Columns="2">
                     <Button Style="{StaticResource ActionButtonStyle}" 
-                            Command="{Binding StartChatCommand}">
+                            Command="{Binding StartChatCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
                         <StackPanel>
                             <Path Data="{StaticResource IconChat}" Fill="White" 
                                   HorizontalAlignment="Center" Width="20" Height="20"
                                   Stretch="Uniform"/>
-                            <TextBlock Text="나와의 채팅" Foreground="White"
+                            <TextBlock Text="{Binding ChatButtonText}" Foreground="White"
                                        FontSize="12" Margin="0 8 0 0"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>                        

@@ -18,59 +18,58 @@ namespace HAHATalk.Services
     {
         private readonly HubConnection _connection;
         private readonly UserStore _userStore;
+        private readonly ApiSettings _apiSettings; // 설정 클래스 추가 
 
         // 이벤트 정의 
         public event Action<string, string>? MessageReceived;
 
-        public SignalRService(UserStore userStore)
+        public SignalRService(UserStore userStore, ApiSettings apiSettings)
         {
             _userStore = userStore;
+            _apiSettings = apiSettings;
 
             // 허브 연결 설정 (서버 주소는 환경에 맞게 수정) 
             _connection = new HubConnectionBuilder()
-                .WithUrl("https://localhost:7203/ChatHub", options =>
+                .WithUrl(_apiSettings.ChatHubUrl, options =>
                 {
-                    // 필요 시 AccessToken 등을 헤더에 담을 수 있습니다.
+                    // 필요 시 AccessToken 등을 헤더에 담을 수 있다.
                     // options.AccessTokenProvider = () => Task.FromResult(_userStore.Token);
                 })
                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) }) // 재연결 간격 구체화
                 .Build();
 
+
+            // 리스너 등록 조직 
+            RegisterHubEvents();
+        }
+
+        private void RegisterHubEvents()
+        {
             // 서버에서 ChatMessageDto 객체 하나를 던질 경우를 대비한 리스너 
             _connection.On<ChatMessageDto>("ReceiveMessage", (msgDto) =>
             {
                 // 기존 이벤트 방식 지원 (문자열 두개로 분해해서 전달) 
                 MessageReceived?.Invoke(msgDto.SenderId, msgDto.Message);
 
-                // Messenger를 통해 현재 열려 잇는 ChatRoomViewModel 에 직접 전달 
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    WeakReferenceMessenger.Default.Send(new NewMessageReceivedMessage(msgDto));
-                });
+                
+                WeakReferenceMessenger.Default.Send(new NewMessageReceivedMessage(msgDto));
+                
             });
-
-          
 
             // 친구 추가 알림 수신 리스터 (서버의 SendAsync("UpdateChatList")를 받는다) 
             _connection.On("UpdateChatList", () =>
             {
+                // 메신저를 통해 ChatListControlViewModel에게 즉시 새로고침 신호 전송                 
+                WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
                 
-                // 메신저를 통해 ChatListControlViewModel에게 즉시 새로고침 신호 전송 
-                // UI 스레드에서 돌아가도록 처리 
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
-                });
             });
 
             // 서버에서 "누군가 메세지를 읽었음"신호를 보낼때 
             _connection.On<string>("ReceiveReadReceipt", (roomId) =>
             {
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    // Messenger를 통해 ChatRoomViewModel에 알림 
-                    WeakReferenceMessenger.Default.Send(new MessagesReadMessage(roomId));
-                });              
+               
+                // Messenger를 통해 ChatRoomViewModel에 알림 
+                WeakReferenceMessenger.Default.Send(new MessagesReadMessage(roomId));               
             });
         }
 
@@ -151,7 +150,7 @@ namespace HAHATalk.Services
             {
                 try
                 {
-                    await _connection.InvokeAsync("SendReadReceipt", roomId, targetId);
+                    await _connection.InvokeAsync("SendReadReceipt", roomId, targetId, _userStore.CurrentUserId);
                 }
                 catch (Exception ex)
                 {

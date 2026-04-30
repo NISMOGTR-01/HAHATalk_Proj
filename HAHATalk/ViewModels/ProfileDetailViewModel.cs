@@ -23,6 +23,7 @@ namespace HAHATalk.ViewModels
         private readonly IAccountService _accountService;   // 2026.04.10 AccountService 변경 
         private readonly IWindowManager _windowManager;     // 2026.03.24 WindowManager 추가 
         private readonly UserStore _userStore;  // 2026.04.01 추가 
+        private readonly ApiSettings _apiSettings; // 2026.04.30 Add 
 
         // 프로필 기본 데이터 
         [ObservableProperty]
@@ -54,6 +55,9 @@ namespace HAHATalk.ViewModels
         private Dictionary<string, bool> _validatingDict;
         private Dictionary<string, bool> ValidatingDict => _validatingDict ??= new Dictionary<string, bool>();
 
+        // IsMe 값에 따라 버튼에 표시할 텍스트 결정 
+        public string ChatButtonText => IsMe ? "나와의 채팅" : "1:1 채팅";
+
         // 생성자 주입 
         public ProfileDetailViewModel(
             INavigationService navigationService, 
@@ -61,13 +65,15 @@ namespace HAHATalk.ViewModels
             Friend friend, 
             bool isMe, 
             IWindowManager windowManager, 
-            UserStore userStore)
+            UserStore userStore, 
+            ApiSettings apiSettings)
         {
             _navigationService = navigationService;
             _accountService = accountService;
             _windowManager = windowManager; // 2026.03.24 추가
             _userStore = userStore;         // 2026.04.01 Add 
             _isMe = isMe;
+            _apiSettings = apiSettings;
 
             // Friend 모델의 속성에 맞춰서 맵핑 
             UserName = friend.FriendName;
@@ -206,7 +212,8 @@ namespace HAHATalk.ViewModels
         private async Task EditProfile()
         {
             // 1. 내 프로필인지 체크
-            if (!IsMe) return;
+            if (!IsMe) 
+                return;
 
             // 2. 프로필 편집 창 띄우기 (현재 값들을 인자로 전달)
             bool? result = _windowManager.ShowProfileEdit(UserName, StatusMessage, ProfileImage);
@@ -225,7 +232,7 @@ namespace HAHATalk.ViewModels
 
                     if (!string.IsNullOrEmpty(updatedAccount.ProfileImg))
                     {
-                        string baseUrl = "https://localhost:7203";
+                        string baseUrl = _apiSettings.BaseUrl.TrimEnd('/');
                         string fullPath = updatedAccount.ProfileImg.StartsWith("http")
                             ? updatedAccount.ProfileImg
                             : $"{baseUrl}{updatedAccount.ProfileImg}";
@@ -234,7 +241,7 @@ namespace HAHATalk.ViewModels
                         ProfileImage = $"{fullPath}?v={DateTime.Now.Ticks}";
                     }
 
-                    // ✅ 오직 '확인'을 눌러 성공했을 때만 다른 화면(친구 목록 등)에 알림을 쏩니다.
+                    // 오직 '확인'을 눌러 성공했을 때만 다른 화면(친구 목록 등)에 알림을 쏩니다.
                     WeakReferenceMessenger.Default.Send(new MyProfileChangedMessage());
                 }
             }

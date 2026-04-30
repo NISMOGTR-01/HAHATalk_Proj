@@ -1,244 +1,138 @@
 ﻿<Window x:Class="HAHATalk.Views.ChatRoomWindow"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:HAHATalk.Views"
-             mc:Ignorable="d" 
-             Title="{Binding TargetName}"
-             Height="600"
-             Width="360"
-             Background="#BACEE0"
-             WindowStyle="None"
-             AllowsTransparency="True"
-             >
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:local="clr-namespace:HAHATalk.Views"
+        xmlns:selectors="clr-namespace:HAHATalk.Selectors"
+        xmlns:models="clr-namespace:CommonLib.Models;assembly=CommonLib"
+        mc:Ignorable="d" 
+        Title="{Binding TargetName}"
+        Height="600"
+        Width="360"
+        Background="#BACEE0"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowStartupLocation="CenterOwner">
+
     <Window.Resources>
-        
-        <DataTemplate x:Key="MyMessageTemplate">
-            <Grid Margin="10 5" HorizontalAlignment="Right" Opacity="{Binding Opacity}">
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 1. 나 (오른쪽 정렬) - 텍스트 -->
+        <DataTemplate x:Key="MyTextTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"
-                                Margin="0 0 5 2">
-                        <TextBlock x:Name="LoadingIcon" Text="&#xE10C;"
-                                   FontFamily="Segoe MDL2 Assets"
-                                   FontSize="12" Foreground="#666666" Visibility="Collapsed"
-                                   Margin="0 0 3 0">
-                            <TextBlock.RenderTransform>
-                                <RotateTransform Angle="0" CenterX="6" CenterY="6"/>
-                            </TextBlock.RenderTransform>                            
-                        </TextBlock>
-
-                        <StackPanel x:Name="FailArea" Orientation="Horizontal" VerticalAlignment="Bottom">
-                            <StackPanel.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="재전송"
-                                              Command="{Binding DataContext.RetrySendMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                              CommandParameter="{Binding}"/>
-                                    <MenuItem Header="삭제"
-                                              Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                              CommandParameter="{Binding}"/>
-                                </ContextMenu>
-                            </StackPanel.ContextMenu>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SendState}" Value="2">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Grid Margin="0 0 3 0" Cursor="Hand">
-                                <Ellipse Width="14" Height="14" Fill="#FF5C5C"/>
-                                <TextBlock Text="!" Foreground="White" FontSize="10"
-                                            FontWeight="Bold" HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Margin="0 0 0 1"/>
-                            </Grid>
-                            <TextBlock Text="실패" Foreground="#FF5C5C" FontSize="10"
-                                        VerticalAlignment="Bottom" Cursor="Hand"/>
-                        </StackPanel>
-
-                        <TextBlock  x:Name="ReadCountText"
-                                    Text="1" FontSize="11" Foreground="#FEE500"
-                                    FontWeight="Bold" VerticalAlignment="Bottom"
-                                    Margin="0 0 5 0">
+                    <StackPanel VerticalAlignment="Bottom" Margin="0,0,5,2">
+                        <!-- 읽음 숫자 "1" 표시 영역 -->
+                        <TextBlock x:Name="ReadCounter" Text="1" FontSize="11" Foreground="#FEE500" FontWeight="Bold">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <!-- 기본적으로는 보임 (IsRead가 false일 때) -->
+                                    <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsRead}" Value="False"/>
-                                                <Condition Binding="{Binding SendState}" Value="1"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        
-                        <TextBlock  x:Name="TimeText"
-                                    Text="{Binding FormattedTime}" FontSize="10"
-                                    Foreground="#666666" VerticalAlignment="Bottom">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SendState}" Value="1">
-                                            <Setter Property="Visibility" Value="Visible"/>
+                                        <!-- IsRead가 True(읽음)가 되면 즉시 숨김 -->
+                                        <DataTrigger Binding="{Binding IsRead}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                    </StackPanel>                
- 
-                    <Border Background="#FEE500" CornerRadius="10 0 10 10" Padding="7">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                       MaxWidth="200" Foreground="#333333">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding MessageType}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
 
-                            <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding FilePath}"
-                                    Background="Transparent" BorderThickness="0"
-                                    Cursor="Hand">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding MessageType}" Value="1">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                                <Image Source="{Binding FilePath}" MaxWidth="200"
-                                       Stretch="Uniform"/>
-                            </Button>
-                        </StackPanel>
+                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666"/>
+                    </StackPanel>
+
+                    <Border Background="#FEE500" CornerRadius="10,0,10,10" Padding="10">
+                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="200" Foreground="#333333"/>
                     </Border>
                 </StackPanel>
             </Grid>
-
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding SendState}" Value="0">
-                    <Setter TargetName="LoadingIcon" Property="Visibility" Value="Visible"/>
-                    <DataTrigger.EnterActions>
-                        <BeginStoryboard x:Name="Rolling">
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetName="LoadingIcon"
-                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                 From="0" To="360"
-                                                 Duration="0:0:1" RepeatBehavior="Forever"/>
-                                
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </DataTrigger.EnterActions>
-                    <DataTrigger.ExitActions>
-                        <StopStoryboard BeginStoryboardName="Rolling"/>
-                    </DataTrigger.ExitActions>
-                </DataTrigger>
-            </DataTemplate.Triggers>
-            
         </DataTemplate>
 
-        <DataTemplate x:Key="OtherMessageTemplate">
-            <Grid Margin="10 5" HorizontalAlignment="Left">
+        <!-- 2. 나 (오른쪽 정렬) - 이미지 -->
+        <DataTemplate x:Key="MyImageTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666" VerticalAlignment="Bottom" Margin="0,0,5,0"/>
+                    <Border CornerRadius="10" ClipToBounds="True" Background="#FEE500">
+                        <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0">
+                            <Image Source="{Binding FilePath}" MaxWidth="200" Stretch="Uniform"/>
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- 3. 상대방 (왼쪽 정렬) - 텍스트 -->
+        <DataTemplate x:Key="OtherTextTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Left">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-
-                <Ellipse Width="35" Height="35"
-                         VerticalAlignment="Top" Margin="0 0 8 0">
+                <Ellipse Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0">
                     <Ellipse.Fill>
-                        <ImageBrush ImageSource="/Assets/default_profile.jpg"/>                        
+                        <ImageBrush ImageSource="/Assets/default_profile.jpg"/>
                     </Ellipse.Fill>
                 </Ellipse>
-
                 <StackPanel Grid.Column="1">
-                    <Border Background="#E1E2E3" CornerRadius="4" 
-                        HorizontalAlignment="Left" Padding="6 2" Margin="0 0 0 5">
-                        <TextBlock Text="{Binding SenderName}" 
-                               FontSize="11" 
-                               FontWeight="Bold"
-                               Foreground="#333333"/>
-                    </Border>
-
+                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold"/>
                     <StackPanel Orientation="Horizontal">
-                        <Border Background="White" CornerRadius="0 10 10 10"
-                                Padding="10 7" BorderBrush="#D0D0D0" BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                            MaxWidth="200" Foreground="#333333">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding MessageType}" Value="0">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-
-                                <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                        CommandParameter="{Binding FilePath}"
-                                        Background="Transparent" BorderThickness="0"
-                                        Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding MessageType}" Value="1">
-                                                    <Setter Property="Visibility" Value="Visible"/>                                                    
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Image Source="{Binding FilePath}" MaxWidth="200"
-                                           Stretch="Uniform"/>
-                                </Button>                                
-                            </StackPanel>                           
+                        <Border Background="White" CornerRadius="0,10,10,10" Padding="10" BorderBrush="#D0D0D0" BorderThickness="1">
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="200" Foreground="#333333"/>
                         </Border>
-                        <TextBlock Text="{Binding FormattedTime}" FontSize="10"
-                                   Foreground="#666666"
-                                   VerticalAlignment="Bottom" Margin="5 0 0 0"/>
-
-                        <TextBlock Text="1" FontSize="11" Foreground="#FEE500"
-                                   FontWeight="Bold" VerticalAlignment="Bottom"
-                                   Margin="5 0 0 2">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsRead}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>                                        
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666" VerticalAlignment="Bottom" Margin="5,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
         </DataTemplate>
-        
+
+        <!-- 4. 상대방 (왼쪽 정렬) - 이미지 -->
+        <DataTemplate x:Key="OtherImageTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Left">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0">
+                    <Ellipse.Fill>
+                        <ImageBrush ImageSource="/Assets/default_profile.jpg"/>
+                    </Ellipse.Fill>
+                </Ellipse>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Border CornerRadius="10" ClipToBounds="True">
+                            <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0">
+                                <Image Source="{Binding FilePath}" MaxWidth="200" Stretch="Uniform"/>
+                            </Button>
+                        </Border>
+                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666" VerticalAlignment="Bottom" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- 5. 공통 파일 메시지 템플릿 -->
+        <DataTemplate x:Key="FileTemplate">
+            <Border Background="White" CornerRadius="10" Padding="10" Margin="5,2" BorderBrush="LightGray" BorderThickness="1">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
+                    <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- 템플릿 셀렉터 설정 -->
+        <selectors:ChatMessageTemplateSelector x:Key="ChatTemplateSelector"
+            MyTextTemplate="{StaticResource MyTextTemplate}"
+            OtherTextTemplate="{StaticResource OtherTextTemplate}"
+            MyImageTemplate="{StaticResource MyImageTemplate}"
+            OtherImageTemplate="{StaticResource OtherImageTemplate}" 
+            MyFileTemplate="{StaticResource FileTemplate}"
+            OtherFileTemplate="{StaticResource FileTemplate}"/>
     </Window.Resources>
 
     <Grid>
@@ -248,94 +142,61 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Background="#BACEE0"
-              MouseDown="Header_MouseDown">
-            <TextBlock Text="{Binding TargetName}"
-                       VerticalAlignment="Center" Margin="15 0 0 0"
-                       FontSize="16" FontWeight="Bold"
-                       Foreground="#333333"/>
-            <Button Content="X" HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Width="40" Height="40" 
-                    Background="Transparent" BorderBrush="{x:Null}"
-                    FontSize="20" Foreground="#555555"
-                    Click="CloseButton_Click" 
-                    Cursor="Hand"/>
+        <!-- 상단 헤더 -->
+        <Grid Grid.Row="0" Background="#BACEE0" MouseDown="Header_MouseDown">
+            <TextBlock Text="{Binding TargetName}" VerticalAlignment="Center" Margin="15 0 0 0"
+                       FontSize="16" FontWeight="Bold" Foreground="#333333"/>
+            <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Width="40" Height="40" Background="Transparent" BorderBrush="{x:Null}"
+                    FontSize="18" Foreground="#555555" Click="CloseButton_Click" Cursor="Hand"/>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" 
-                      x:Name="ChatScroller"
-                      VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Messages}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <ContentControl Content="{Binding}">
-                            <ContentControl.Style>
-                                <Style TargetType="ContentControl">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource OtherMessageTemplate}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsMine}" Value="True">
-                                            <Setter Property="ContentTemplate"
-                                                    Value="{StaticResource MyMessageTemplate}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ContentControl.Style>
-                        </ContentControl>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
+        <!-- 채팅 메시지 영역 -->
+        <ScrollViewer Grid.Row="1" x:Name="ChatScroller" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Messages}"
+                          ItemTemplateSelector="{StaticResource ChatTemplateSelector}">
+                <!-- 가상화 설정 (메시지가 많아질 경우 대비) -->
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
             </ItemsControl>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Background="White" Padding="5">
-            <Grid MinHeight="100">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- 하단 입력창 -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E1E1E1" BorderThickness="0 1 0 0">
+            <Grid MinHeight="120">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="40"/>
+                </Grid.RowDefinitions>
 
-                <Button Command="{Binding SelectFileCommand}"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Bottom"
-                        Margin="10 0 0 10"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Cursor="Hand"
-                        ToolTip="파일보내기">
-                    <TextBlock Text="&#xE723;"
-                               FontFamily="Segoe MDL2 Assets"
-                               FontSize="20"
-                               Foreground="#404040"/>
-                    
-                </Button>
-
-                <TextBox x:Name="MessageInput"
+                <TextBox x:Name="MessageInput" Grid.Row="0"
                          Text="{Binding InputMessage, UpdateSourceTrigger=PropertyChanged}"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         BorderThickness="0" Margin="10 10 10 40"
-                         FontSize="14"
-                         VerticalScrollBarVisibility="Auto"
-                         KeyDown="MessageInput_KeyDown"/>
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         BorderThickness="0" Margin="10" FontSize="14"
+                         VerticalScrollBarVisibility="Auto" KeyDown="MessageInput_KeyDown"/>
 
-                <Button Grid.Column="1" Content="전송"
-                        Command="{Binding SendMessageCommand}"
-                        Background="#FEE500" FontWeight="Bold"
-                        Margin="10 10 10 10" Height="40"
-                        VerticalAlignment="Bottom">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="5"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
+                <Grid Grid.Row="1" Margin="10 0 10 10">
+                    <Button Command="{Binding SelectFileCommand}"
+                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="파일보내기">
+                        <TextBlock Text="&#xE723;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#404040"/>
+                    </Button>
+
+                    <Button Content="전송" HorizontalAlignment="Right"
+                            Command="{Binding SendMessageCommand}"
+                            Background="#FEE500" Width="60" Height="30" FontWeight="Bold"
+                            BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="3"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </Grid>
             </Grid>
-
-
         </Border>
-        
-        
-        
     </Grid>
-
 </Window>

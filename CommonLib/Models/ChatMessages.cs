@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommonLib.Enums;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Identity.Client;
 using System;
 using System.Collections.Generic;
@@ -40,8 +41,8 @@ namespace CommonLib.Models
         private string _senderName;
         [ObservableProperty]
         private string _profilePath;
-
-        public string MessageGuid { get; set; } 
+        [ObservableProperty]
+        public string _messageGuid; 
 
         // 전송 상태를 정의하는 enum 
         public enum MessageStatus
@@ -72,10 +73,10 @@ namespace CommonLib.Models
         public bool IsStatusSucess => Status == MessageStatus.Success;
 
         // 이미지 메시지 인지 여부를 즉시 판단하는 읽기 전용속성 
-        public bool IsImage => MessageType == 1 && !string.IsNullOrEmpty(FilePath);
+        public bool IsImage => MessageType == (int)CommonLib.Enums.ChatMessageTypes.Image && !string.IsNullOrEmpty(FilePath);
 
         // 텍스트 메세지인지 여부 
-        public bool IsText => MessageType == 0;
+        public bool IsText => MessageType == (int)CommonLib.Enums.ChatMessageTypes.Text;
 
         // View에서 Binding 읽기 전용 시간 포맷 
         // 오전 / 오후가 나오도록 반영하는 부분 

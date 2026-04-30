@@ -26,8 +26,8 @@ namespace HAHATalk.ViewModels
         private readonly IFriendService _friendService;   // 2026.03.19 FriendService 추가 
         private readonly IAccountService _accountService; // 2026.03.21 AccountService 추가 
         private readonly UserStore _userStore;
-
         private readonly IWindowManager _windowManager;      // 2026.03.24 windowManager 추가 
+        private readonly ApiSettings _apiSettings; // 2026.04.29 Add
 
         // XAML의 ItemsControl ItemsSource={Binding Friends}
         [ObservableProperty]
@@ -52,20 +52,27 @@ namespace HAHATalk.ViewModels
 
 
 
-        public FriendListControlViewModel(INavigationService navigationService, UserStore userStore, IFriendService friendService, 
-                                            IAccountService accountService, IWindowManager windowManager)
+        public FriendListControlViewModel(
+                INavigationService navigationService, 
+                UserStore userStore, 
+                IFriendService friendService, 
+                IAccountService accountService, 
+                IWindowManager windowManager, 
+                ApiSettings apiSettings)
         {
             this._navigationService = navigationService;
             this._userStore = userStore;
             this._friendService = friendService;
             this._accountService = accountService;
             this._windowManager = windowManager;
+            this._apiSettings = apiSettings;
             // 초기 데이터 세팅
             Friends = new ObservableCollection<Friend>();
 
             // 내 카톡 프로필 초기화 (로그인 정보 기반) 
             InitializeMyProfile();
 
+            // 메신저 등록 : 프로필 변경 신호가 오면 내 정보 새로고침 
             WeakReferenceMessenger.Default.Register<MyProfileChangedMessage>(this, (r, m) =>
             {
                 // 방송이 들리면 내 정보를 새로고침하는 메서드 호출 
@@ -88,7 +95,7 @@ namespace HAHATalk.ViewModels
             {
                 FriendName = _userStore.CurrentUserNickname,
                 TargetEmail = _userStore.CurrentUserId,
-                StatusMsg = "오늘도 화이팅!",
+                StatusMsg = _userStore.CurrentUserStatusMsg,
                 ProfileImg = _userStore.CurrentUserProfile
             };
 
@@ -161,7 +168,8 @@ namespace HAHATalk.ViewModels
                     selectedFriend, 
                     isMe,
                     _windowManager, 
-                    _userStore
+                    _userStore, 
+                    _apiSettings
                 );
 
             // 3. Window 생성 및 데이터 context 연결 
@@ -302,7 +310,7 @@ namespace HAHATalk.ViewModels
                 // 이미지 경로 처리 (BaseUrl + 캐시 방지 틱 추가) 
                 if(!string.IsNullOrEmpty(me.ProfileImg))
                 {
-                    string baseUrl = "https://localhost:7203";
+                    string baseUrl = _apiSettings.BaseUrl.TrimEnd('/');
                     string fullPath = me.ProfileImg.StartsWith("https")
                         ? me.ProfileImg
                         : $"{baseUrl}{me.ProfileImg}";

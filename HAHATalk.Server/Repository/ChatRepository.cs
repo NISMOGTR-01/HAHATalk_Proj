@@ -112,30 +112,40 @@ namespace HAHATalk.Server.Repository
         public async Task<bool> MSSQL_UpdateChatListAsync(ChatMessageDto message, string targetId, string targetName, string myId, string myNickname)
         {
             const string query = @"
-                -- 1. 내(발신자) 목록 처리
-                IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @myId)
-                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop)
-                    VALUES (@roomId, @myId, @targetId, @targetName, @msgText, @lastTime, 0, 0);
-                ELSE
-                    UPDATE ChatList 
-                    SET LastMessage = @msgText, LastTime = @lastTime, TargetName = @targetName
-                    WHERE RoomId = @roomId AND OwnerId = @myId;
+            -- [추가] 0. ChatMember 테이블에 방 멤버 등록 (방이 처음 생성될 때만 수행)
+            -- 발신자 등록
+            IF NOT EXISTS (SELECT 1 FROM ChatMember WHERE RoomId = @roomId AND UserId = @myId)
+                INSERT INTO ChatMember (RoomId, UserId, JoinTime) VALUES (@roomId, @myId, GETDATE());
+            
+            -- 수신자 등록
+            IF NOT EXISTS (SELECT 1 FROM ChatMember WHERE RoomId = @roomId AND UserId = @targetId)
+                INSERT INTO ChatMember (RoomId, UserId, JoinTime) VALUES (@roomId, @targetId, GETDATE());
 
-                -- 2. 상대방(수신자) 목록 처리
-                IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @targetId)
-                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop)
-                    VALUES (@roomId, @targetId, @myId, @myNickname, @msgText, @lastTime, 1, 0);
-                ELSE
-                    UPDATE ChatList 
-                    SET LastMessage = @msgText, LastTime = @lastTime, UnreadCount = UnreadCount + 1, TargetName = @myNickname
-                    WHERE RoomId = @roomId AND OwnerId = @targetId;";
+            -- 1. 내(발신자) 목록 처리
+            IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @myId)
+                INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop)
+                VALUES (@roomId, @myId, @targetId, @targetName, @msgText, @lastTime, 0, 0);
+            ELSE
+                UPDATE ChatList 
+                SET LastMessage = @msgText, LastTime = @lastTime, TargetName = @targetName
+                WHERE RoomId = @roomId AND OwnerId = @myId;
+
+            -- 2. 상대방(수신자) 목록 처리
+            IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @targetId)
+                INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop)
+                VALUES (@roomId, @targetId, @myId, @myNickname, @msgText, @lastTime, 1, 0);
+            ELSE
+                UPDATE ChatList 
+                SET LastMessage = @msgText, LastTime = @lastTime, UnreadCount = UnreadCount + 1, TargetName = @myNickname
+                WHERE RoomId = @roomId AND OwnerId = @targetId;";
 
             try
             {
                 using var db = CreateConnection();
 
                 // 트랜잭션을 사용하여 두 작업을 원자적으로 처리
-                if (db.State != ConnectionState.Open) db.Open();
+                if (db.State != ConnectionState.Open) 
+                    db.Open();
                 
                 using var trans = db.BeginTransaction();
 
@@ -187,6 +197,48 @@ namespace HAHATalk.Server.Repository
         public async Task<bool> MarkAsReadAsync(string roomId, string userId)
         {
             return await MSSQL_UpdateReadStatusAsync(roomId, userId);
+        }
+
+        // 채팅방에 인원수를 가져오는 쿼리 
+        public async Task<int> MSSQL_GetRoomMemberCountAsync(string roomId)
+        {
+            string query = "SELECT COUNT(*) FROM ChatMember WHERE RoomId = @RoomId";
+
+            try
+            {
+                using var db = CreateConnection();
+
+                // ExecuteScalar는 결과의 첫번째 행의 첫번째 칼럼 return 
+                return await db.ExecuteScalarAsync<int>(query, new { roomId });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "방 인원 수 조회 오류 (RoomId: {RoomId}", roomId);
+                return 0;
+            }
+        }
+
+        // 채팅방에 멤버 추가 기능 메서드 
+        public async Task<bool> MSSQL_AddChatMemberAsync(string roomId, string userId)
+        {
+            const string query = @"
+                IF NOT EXISTS (SELECT 1 FROM ChatMember WHERE RoomId = @roomId AND UserId = @userId)
+                BEGIN 
+                    INSERT INTO ChatMember (RoomId, UserId, JoinTime)
+                    VALUES (@roomId, @userId, GETDATE())
+                END";
+
+            try
+            {
+                using var db = CreateConnection();
+                await db.ExecuteAsync(query, new { roomId, userId });
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "멤버 초대 중 오류 발생 (RoomId: {RoomId}, UserId: {UserId})", roomId, userId);
+                return false;
+            }
         }
     }
 }
