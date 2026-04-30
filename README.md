@@ -48,7 +48,7 @@
 * **Architecture**: DI 컨테이너 구축 및 기초 UI 스캐폴딩.
 
 ### **2026-03: 실시간 통신 코어 및 DB 엔진 구축**
-* **Real-time**: **ASP.NET Core SignalR Hub 서버 직접 구축** 및 메시지 브로드캐스팅 엔진 개발.
+* **Real-time**: **ASP.NET Core SignalR Hub 서버 구축** 및 메시지 브로드캐스팅 엔진 적용.
 * **Data**: MSSQL 기반 EF Core 연동 및 유저/채팅 데이터 스키마 설계.
 
 ### **2026-04: 보안 강화 및 시스템 고도화**
