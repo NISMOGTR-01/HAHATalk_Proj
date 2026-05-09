@@ -20,5 +20,12 @@ namespace HAHATalk.Services
             string targetName, string myId, string myNickname);
 
         Task MarkAsReadAsync(string roomId, string userId);
+
+        // 2026.05.07 파일 업로드 기능 추가 
+        Task<string> UploadFileAsync(string localPath);
+
+        //2026.05.09 Add
+        string GetServerFullUrl(string relativeUrl);
+
     }
 }

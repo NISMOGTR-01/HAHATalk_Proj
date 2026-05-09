@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using CommonLib.Dtos;
+using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,5 +26,11 @@ namespace HAHATalk.Services
         Task JoinRoom(string roomId);
 
         Task SendReadReceiptAsync(string roomId, string targetId);
+
+        // 2026.05.07 이미지 / 파일 전송을 위한 메서드추가 
+        Task SendFileMessageAsync(string roomId, string targetEmail, string fileName, string filePath, int messageType);
+
+
+        Task SendDtoMessageAsync(ChatMessageDto dto, string targetEmail);
     }
 }

@@ -1,7 +1,10 @@
 ﻿using CommonLib.Dtos;
+using CommonLib.Enums;
 using CommonLib.Models;
 using HAHATalk.Server.Repository;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting.Internal;
+using MySql.Data.MySqlClient;
 using Serilog;
 using System.Formats.Asn1;
 
@@ -13,10 +16,12 @@ namespace HAHATalk.Server.Controllers
     public class ChatController : ControllerBase
     {
         private readonly IChatRepository _chatRepository;
+        private readonly IWebHostEnvironment _env;  // 주입받을 환경 객체 필드 
 
-        public ChatController(IChatRepository chatRepository)
+        public ChatController(IChatRepository chatRepository, IWebHostEnvironment env)
         {
             _chatRepository = chatRepository;
+            _env = env;
         }
 
         // 채팅 목록 가져오기
@@ -167,6 +172,64 @@ namespace HAHATalk.Server.Controllers
                 Log.Error(ex, "[Chat] 읽음 처리 중 예외 발생");
                 return StatusCode(500, "서버 오류");
             }
+        }
+
+        // 2026.05.07 Add
+        [HttpPost("upload-file")]
+        public async Task<IActionResult> UploadFile(IFormFile file)
+        {
+            if(file == null || file.Length == 0)
+            {
+                return BadRequest("파일이 없습니다");
+            }
+
+            try
+            {
+                var extension = Path.GetExtension(file.FileName).ToLower();
+
+                // ChatMessageType 활용 
+                ChatMessageTypes msgType = ChatMessageTypes.File; // 기본 값은 일반 파일을 설정 
+                string subFolder = "files";
+
+                if(extension == ".jpg" || extension == ".png" || extension == ".gif")
+                {
+                    msgType = ChatMessageTypes.Image;
+                    subFolder = "images";
+                }
+                else if(extension == ".mp4" || extension == ".avi")
+                {
+                    msgType = ChatMessageTypes.Video;
+                    subFolder = "videos";
+                }
+
+                var uploadDir = Path.Combine(_env.WebRootPath, "uploads", "chat", subFolder);
+                
+                // 폴더가 없는 경우 폴더 생성 
+                if (!Directory.Exists(uploadDir))
+                    Directory.CreateDirectory(uploadDir);
+
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var filePaht = Path.Combine(uploadDir, fileName);
+
+                using (var stream = new FileStream(filePaht, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // 클라이언트에게 URL과 결정된 MessageType를 함께 RETURN
+                return Ok(new
+                {
+                    url = $"/uploads/chat/{subFolder}/{fileName}", 
+                    messageType = (int)msgType,
+                    originName = file.FileName
+                });
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "[Chat] 파일 업로드 예외");
+                return StatusCode(500, "서버 저장 실패");
+            }
+           
         }
     }
 }

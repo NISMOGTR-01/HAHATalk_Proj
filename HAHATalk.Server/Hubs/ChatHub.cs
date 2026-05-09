@@ -29,6 +29,26 @@ namespace HAHATalk.Server.Hubs
             _chatRepository = repository;
         }
 
+        // Dto를 받는 메서드 추가 2026.05.09
+        public async Task SendMessageDto(string targetId, ChatMessageDto dto)
+        {
+            Log.Information("[SignalR] DTO 수신: {SenderId} -> {TargetId}", dto.SenderId, targetId);
+
+            try
+            {
+                // 방에 있는 사람들에게 실시간 전송 
+                await Clients.Group(dto.RoomId).SendAsync("ReceiveMessage", dto);
+
+                // 타겟 유저에게 목록 갱신 신호 전송
+                await Clients.User(targetId).SendAsync("UpdateChatList");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[ChatHub] DTO 전송 중 에러");
+
+            }
+        }
+
 
         // 클라이언트 에서 'SendMessage'를 호출할 때 
         public async Task SendMessage(string roomId, string senderId, string targetId, 
