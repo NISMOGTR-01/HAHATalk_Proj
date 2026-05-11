@@ -18,19 +18,15 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- 1. 나 (오른쪽 정렬) - 텍스트 -->
         <DataTemplate x:Key="MyTextTemplate">
             <Grid Margin="10,5" HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                     <StackPanel VerticalAlignment="Bottom" Margin="0,0,5,2">
-                        <!-- 읽음 숫자 "1" 표시 영역 -->
                         <TextBlock x:Name="ReadCounter" Text="1" FontSize="11" Foreground="#FEE500" FontWeight="Bold">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <!-- 기본적으로는 보임 (IsRead가 false일 때) -->
                                     <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <!-- IsRead가 True(읽음)가 되면 즉시 숨김 -->
                                         <DataTrigger Binding="{Binding IsRead}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
@@ -49,7 +45,6 @@
             </Grid>
         </DataTemplate>
 
-        <!-- 2. 나 (오른쪽 정렬) - 이미지 -->
         <DataTemplate x:Key="MyImageTemplate">
             <Grid Margin="10,5" HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
@@ -64,20 +59,24 @@
             </Grid>
         </DataTemplate>
 
-        <!-- 3. 상대방 (왼쪽 정렬) - 텍스트 -->
         <DataTemplate x:Key="OtherTextTemplate">
             <Grid Margin="10,5" HorizontalAlignment="Left">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Ellipse Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0">
-                    <Ellipse.Fill>
-                        <ImageBrush ImageSource="/Assets/default_profile.jpg"/>
-                    </Ellipse.Fill>
-                </Ellipse>
+
+                <Border Grid.Column="0" Width="35" Height="35" 
+                        VerticalAlignment="Top" Margin="0,0,8,0" 
+                        CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
+                    <Image Stretch="UniformToFill"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Source="{Binding DisplayProfile}"/>
+                </Border>
+
                 <StackPanel Grid.Column="1">
-                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold" Foreground="#444444"/>
                     <StackPanel Orientation="Horizontal">
                         <Border Background="White" CornerRadius="0,10,10,10" Padding="10" BorderBrush="#D0D0D0" BorderThickness="1">
                             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="200" Foreground="#333333"/>
@@ -88,34 +87,54 @@
             </Grid>
         </DataTemplate>
 
-        <!-- 4. 상대방 (왼쪽 정렬) - 이미지 -->
         <DataTemplate x:Key="OtherImageTemplate">
             <Grid Margin="10,5" HorizontalAlignment="Left">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Ellipse Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0">
-                    <Ellipse.Fill>
-                        <ImageBrush ImageSource="/Assets/default_profile.jpg"/>
-                    </Ellipse.Fill>
-                </Ellipse>
+
+                <Border Grid.Column="0" Width="35" Height="35" 
+                        VerticalAlignment="Top" Margin="0,0,8,0" 
+                        CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
+                    <Image Stretch="UniformToFill"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Source="{Binding DisplayProfile}">
+
+                    </Image>
+                </Border>
+
                 <StackPanel Grid.Column="1">
-                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SenderName}" 
+                       FontSize="11" 
+                       Margin="0,0,0,5" 
+                       FontWeight="Bold" 
+                       Foreground="#444444"/>
+
                     <StackPanel Orientation="Horizontal">
                         <Border CornerRadius="10" ClipToBounds="True">
                             <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0">
-                                <Image Source="{Binding FilePath}" MaxWidth="200" Stretch="Uniform"/>
+                            CommandParameter="{Binding FilePath}" 
+                            Background="Transparent" 
+                            BorderThickness="0"
+                            Cursor="Hand">
+                                <Image Source="{Binding FilePath}" 
+                               MaxWidth="200" 
+                               Stretch="Uniform"/>
                             </Button>
                         </Border>
-                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666" VerticalAlignment="Bottom" Margin="5,0,0,0"/>
+
+                        <TextBlock Text="{Binding FormattedTime}" 
+                           FontSize="10" 
+                           Foreground="#666666" 
+                           VerticalAlignment="Bottom" 
+                           Margin="5,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
         </DataTemplate>
 
-        <!-- 5. 공통 파일 메시지 템플릿 -->
         <DataTemplate x:Key="FileTemplate">
             <Border Background="White" CornerRadius="10" Padding="10" Margin="5,2" BorderBrush="LightGray" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
@@ -125,37 +144,90 @@
             </Border>
         </DataTemplate>
 
-        <!-- 템플릿 셀렉터 설정 -->
+        <DataTemplate x:Key="MyFileTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Right">
+                <Border Background="White" CornerRadius="10,0,10,10" Padding="10" BorderBrush="#E1E1E1" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📄" FontSize="20" Margin="0,0, 10,0"/>
+                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold" Foreground="#333333"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="OtherFileTemplate">
+            <Grid Margin="10,5" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <Border Background="White" CornerRadius="0,10,10,10" Padding="10" BorderBrush="#D0D0D0" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
         <selectors:ChatMessageTemplateSelector x:Key="ChatTemplateSelector"
-            MyTextTemplate="{StaticResource MyTextTemplate}"
-            OtherTextTemplate="{StaticResource OtherTextTemplate}"
-            MyImageTemplate="{StaticResource MyImageTemplate}"
-            OtherImageTemplate="{StaticResource OtherImageTemplate}" 
-            MyFileTemplate="{StaticResource FileTemplate}"
-            OtherFileTemplate="{StaticResource FileTemplate}"/>
+                   MyTextTemplate="{StaticResource MyTextTemplate}"
+                   OtherTextTemplate="{StaticResource OtherTextTemplate}"
+                   MyImageTemplate="{StaticResource MyImageTemplate}"
+                   OtherImageTemplate="{StaticResource OtherImageTemplate}" 
+                   MyFileTemplate="{StaticResource MyFileTemplate}"       
+                   OtherFileTemplate="{StaticResource OtherFileTemplate}"/>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="50"/>
+            <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 상단 헤더 -->
         <Grid Grid.Row="0" Background="#BACEE0" MouseDown="Header_MouseDown">
-            <TextBlock Text="{Binding TargetName}" VerticalAlignment="Center" Margin="15 0 0 0"
-                       FontSize="16" FontWeight="Bold" Foreground="#333333"/>
-            <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Width="40" Height="40" Background="Transparent" BorderBrush="{x:Null}"
-                    FontSize="18" Foreground="#555555" Click="CloseButton_Click" Cursor="Hand"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" 
+                    Width="50" 
+                    Height="50" 
+                    Margin="15,0,0,0" 
+                    CornerRadius="25" 
+                    Background="White" 
+                    ClipToBounds="True"
+                    VerticalAlignment="Center">
+
+                <Image Source="{Binding TargetProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" 
+                       Stretch="UniformToFill" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"/>
+            </Border>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                <TextBlock Text="{Binding TargetName}" 
+                   FontSize="16" FontWeight="SemiBold" Foreground="#2C2C2C"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Opacity="0.6">
+                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" 
+                       FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBlock Text="{Binding ParticipantCount}" 
+                       FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Button Grid.Column="2" Width="45" Height="45" Margin="0,0,10,0"
+                    Background="Transparent" BorderThickness="0"
+                    VerticalAlignment="Center" Click="CloseButton_Click" Cursor="Hand">
+                <TextBlock Text="✕" FontSize="20" Foreground="#555555"/>
+            </Button>
         </Grid>
 
-        <!-- 채팅 메시지 영역 -->
         <ScrollViewer Grid.Row="1" x:Name="ChatScroller" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Messages}"
                           ItemTemplateSelector="{StaticResource ChatTemplateSelector}">
-                <!-- 가상화 설정 (메시지가 많아질 경우 대비) -->
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel/>
@@ -164,7 +236,6 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <!-- 하단 입력창 -->
         <Border Grid.Row="2" Background="White" BorderBrush="#E1E1E1" BorderThickness="0 1 0 0">
             <Grid MinHeight="120">
                 <Grid.RowDefinitions>

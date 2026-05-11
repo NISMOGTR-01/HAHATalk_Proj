@@ -24,7 +24,7 @@ namespace HAHATalk.ViewModels
         private readonly UserStore _userStore;  // 2026.04.06 접속 정보 Store 
         private readonly IChatService _chatService; // 2026.04.06 ChatRepository 
         private readonly IWindowManager _windowManager; // 2026.04.06 WIndowManager
-
+        private readonly ApiSettings _apiSettings; // 2026.05.1 Add apisetting add 
 
         // 채팅방 목록을 담는 콜렉션 
         [ObservableProperty]
@@ -37,12 +37,14 @@ namespace HAHATalk.ViewModels
         public ChatListControlViewModel(INavigationService navigationService, 
                 UserStore userStore, 
                 IChatService chatService, 
-                IWindowManager windowManager)
+                IWindowManager windowManager, 
+                ApiSettings apiSettings)
         {
             _navigationService = navigationService;
             _userStore = userStore;
             _chatService = chatService;
             _windowManager = windowManager;
+            _apiSettings = apiSettings;
 
             // 2024.04.14 메신저 등록 
             // ChatRoom에서 새 메세지를 보냈을때 (처음 채팅 포함) 이 신호를 받아 목록을 새로 고침 
@@ -103,6 +105,17 @@ namespace HAHATalk.ViewModels
             {
                 foreach(var room in rooms)
                 {
+                    // 2. 서비스에서 처리하지 못한 예외적인 기본값만 여기서 처리합니다.
+                    if (string.IsNullOrEmpty(room.ProfileImg))
+                    {
+                        room.ProfileImg = "/Assets/default_profile.png";
+                    }
+
+                    if (string.IsNullOrEmpty(room.TargetName))
+                    {
+                        room.TargetName = "이름 없음";
+                    }
+
                     ChatList.Add(room);
                 }
             }

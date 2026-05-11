@@ -1,4 +1,6 @@
-﻿namespace CommonLib.Dtos
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace CommonLib.Dtos
 {
     public class ChatMessageDto
     {
@@ -28,6 +30,9 @@
 
         // 시간 포맷팅 
         public string FomattedTime => SendTime.ToString("t");
+
+        // 2026.05.11 DB 테이블에는 없지만 JOIN으로 채워져서 올 필드     
+        public string SenderProfile { get; set; } = null;
         
     }
 }

@@ -36,6 +36,26 @@ namespace HAHATalk.Server.Hubs
 
             try
             {
+                // DTO를 ChatMessage 모델로 변환하여 DB 에 저장 
+                var chatMsg = new ChatMessage
+                {
+                    RoomId = dto.RoomId,
+                    SenderId = dto.SenderId,
+                    Message = dto.Message,
+                    MessageType = dto.MessageType,
+                    FilePath = dto.FilePath, 
+                    FileName = dto.FileName,
+                    SendTime = dto.SendTime,
+                    MessageGuid = dto.MessageGuid,
+                    IsRead = false
+                };
+
+                // DB 저장 실행 
+                await _chatRepository.MSSQL_SaveMessageAsync(chatMsg);
+
+                // 목록 업데이트 (최근 메세지 갱신용) 
+                await _chatRepository.MSSQL_UpdateChatListAsync(dto, targetId, targetId, dto.SenderId, dto.SenderId);
+
                 // 방에 있는 사람들에게 실시간 전송 
                 await Clients.Group(dto.RoomId).SendAsync("ReceiveMessage", dto);
 
@@ -242,7 +262,6 @@ namespace HAHATalk.Server.Hubs
                 await _chatRepository.MarkAsReadAsync(roomId, readerId);
 
                 // 🔥 수정: Clients.User 대신 Clients.Group을 사용해 보세요.
-                // 프리덤이 이 방에 접속해 있다면 무조건 신호를 받게 됩니다.
                 await Clients.Group(roomId).SendAsync("ReceiveReadReceipt", roomId);
 
                 Log.Information($"[읽음신호] {readerId}가 읽음 -> 방 전체에 알림");
@@ -250,27 +269,7 @@ namespace HAHATalk.Server.Hubs
             catch (Exception ex) { Log.Error(ex, "에러"); }
 
 
-            /*
-            // senderId: 메시지를 보낸 사람 (프리덤 - '1'이 사라져야 할 사람)
-            // readerId: 메시지를 읽은 사람 (기로로 - 지금 포커스를 잡은 사람)
-
-            try
-            {
-                // 1. DB 업데이트: 읽은 사람(기로로)의 안 읽은 개수를 0으로, 
-                //    상대방(프리덤)이 보낸 메시지를 읽음(IsRead=1) 처리
-                await _chatRepository.MarkAsReadAsync(roomId, readerId);
-
-                // 2. 메시지를 보낸 사람(senderId = 프리덤)에게 신호 전송
-                // Clients.User가 안 먹힐 경우를 대비해 Group으로 쏘는 것도 방법입니다.
-                await Clients.User(senderId).SendAsync("ReceiveReadReceipt", roomId);
-
-                Log.Information($"[읽음] {readerId}가 읽음 -> {senderId}에게 알림 (Room: {roomId})");
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "SendReadReceipt 에러");
-            }
-            */
+            
         }
     }
 }

@@ -119,21 +119,38 @@ namespace HAHATalk.ViewModels
 
             try
             {
-                // 비동기 방식으로 변경 (2026.03.31)
-                // DB에서 친구 목록 가져오기 
                 var dbFriends = await _friendService.GetFriendsAsync(myId);
 
-                // UI 스레드에서 컬렉션 업데이트 
-               
                 Friends.Clear();
-                if (dbFriends != null)
+                if(dbFriends != null)
                 {
-                    foreach (var friend in dbFriends)
+                    // 서버 베이스 URL 가져오기 
+                    string baseUrl = _apiSettings.BaseUrl.TrimEnd('/');
+
+                    foreach(var friend in dbFriends)
                     {
+                        // 프로필 이미지 경로가 존재할 경우 전체 URL로 변환 
+                        if(!string.IsNullOrEmpty(friend.ProfileImg))
+                        {
+                            // 이미 전체 경로(https)인 경우를 제외하고 결합 
+                            if(!friend.ProfileImg.StartsWith("http"))
+                            {
+
+                                friend.ProfileImg = $"{baseUrl}{friend.ProfileImg}";
+                            }
+
+                            // 목록에서도 최신 이미지를 반영하고 싶다면 틱 추가 (선택 사항)
+                            // friend.ProfileImg = $"{friend.ProfileImg}?v={DateTime.Now.Ticks}";
+                        }
+                        else
+                        {
+                            // 프로필 이미지가 없을 때의 기본 이미지 설정
+                            friend.ProfileImg = "pack://application:,,,/HAHATalk;component/Assets/default_user.png";
+                        }
+
                         Friends.Add(friend);
                     }
                 }
-                // 상단 카운트 텍스트 업데이트 
                 FriendsCountText = $"친구 {Friends.Count}명";
                 
             }

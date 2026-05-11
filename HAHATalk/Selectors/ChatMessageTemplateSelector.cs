@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using CommonLib.Models;
+using CommonLib.Enums;
 
 namespace HAHATalk.Selectors
 {
@@ -20,16 +21,29 @@ namespace HAHATalk.Selectors
             var message = item as ChatMessage;
             if (message == null) return null;
 
+            // 디버깅용: 출력창에서 특정 메시지의 타입을 확인해보세요.
+            // System.Diagnostics.Debug.WriteLine($"Msg: {message.Message}, Type: {message.MessageType}");
+
+            // MessageType이 Image(1)이거나, 타입이 File(3)이어도 확장자가 이미지면 이미지 템플릿 사용
+            bool isActuallyImage = (message.MessageType == (int)ChatMessageTypes.Image) ||
+                                  (message.MessageType == (int)ChatMessageTypes.File && message.IsImage);
+
             if (message.IsMine)
             {
-                if (message.MessageType == 1) return MyImageTemplate;
-                if (message.MessageType == 2) return MyFileTemplate;
+                if (isActuallyImage) 
+                    return MyImageTemplate;
+                if (message.MessageType == (int)ChatMessageTypes.File) 
+                    return MyFileTemplate;
+
                 return MyTextTemplate;
             }
             else
             {
-                if (message.MessageType == 1) return OtherImageTemplate;
-                if (message.MessageType == 2) return OtherFileTemplate;
+                if (isActuallyImage) 
+                    return OtherImageTemplate;
+                if (message.MessageType == (int)ChatMessageTypes.File) 
+                    return OtherFileTemplate;
+
                 return OtherTextTemplate;
             }
         }

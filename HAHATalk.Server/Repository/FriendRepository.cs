@@ -15,8 +15,7 @@ namespace HAHATalk.Server.Repository
         public FriendRepository(IConfiguration configuration) : base(configuration)
         {
 
-        }
-        
+        }        
             
         
         // 친구추가 
@@ -68,21 +67,29 @@ namespace HAHATalk.Server.Repository
         public async Task<List<Friend>> MSSQL_GetFriendsAsync(string myEmail)
         {
             // 쿼리 결과의 컬럼명과 Friend 클래스의 프로퍼티명이 다를 경우 AS를 사용하거나 
-            // Dapper의 매핑 설정을 활용할 수 있습니다. 
-            // Friend 모델의 프로퍼티가 MyEmail, TargetEmail 형태라면 아래처럼 조회합니다.
+            // Dapper의 매핑 설정을 활용 가능 . 
+            // Friend 모델의 프로퍼티가 MyEmail, TargetEmail 형태라면 아래처럼 조회
+
+            // 2026.05.11 Add 
+            // Friends / Account Table JOIN하여 실시간 정보 가져오기 
+            // f.friends_name : 내가 설정한 친구의 이름 
+            // a.status_msg, a.profile_img : 상대방이 직접 수정한 최신 정보 
+
             const string query = @"
                 SELECT 
-                    my_email AS MyEmail, 
-                    target_email AS TargetEmail, 
-                    friend_name AS FriendName, 
-                    status_msg AS StatusMsg
-                FROM Friends
-                WHERE my_email = @myEmail";
+                    f.my_email AS MyEmail, 
+                    f.target_email AS TargetEmail, 
+                    f.friend_name AS FriendName, 
+                    COALESCE(a.status_msg, '') AS StatusMsg, 
+                    COALESCE(a.profile_img, '') AS ProfileImg
+                FROM dbo.friends f
+                LEFT JOIN dbo.account a ON f.target_email = a.email
+                WHERE f.my_email = @myEmail";
 
             try
             {
                 using var db = CreateConnection();
-                // QueryAsync<T> 한 줄로 모든 리스트 매핑이 끝납니다.
+                // Dapper가 이제 AS 뒤에 있는 이름을 보고 MyEmail 프로퍼티에 정확히 값을 매핑합니다.
                 var friends = await db.QueryAsync<Friend>(query, new { myEmail });
 
                 return friends.ToList();

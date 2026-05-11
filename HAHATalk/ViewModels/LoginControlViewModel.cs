@@ -52,7 +52,19 @@ namespace HAHATalk.ViewModels
                 "test3@test.com",
             };
 
-            SelectedEmail = Emails.FirstOrDefault()!;
+            //SelectedEmail = Emails.FirstOrDefault()!;
+            // 저장된 마지막 메일 불러오기 
+            string lastEmail = HAHATalk.Properties.Settings.Default.LastEmail;
+
+            // 저장된 값이 있고 목록에 있다면 선택, 없으면 첫번째 선택 
+            if(!string.IsNullOrEmpty(lastEmail))
+            {
+                SelectedEmail = lastEmail;
+            }
+            else
+            {
+                SelectedEmail = Emails.FirstOrDefault()!;
+            }
 
         }
 
@@ -92,6 +104,14 @@ namespace HAHATalk.ViewModels
                 if (response != null && response.IsSuccess)
                 {
                     var account = response.UserAccount;
+
+                    // 2025.05.11 Add 로그인 성공 시 현재 이메일을 로컬 설정에 저장 
+                    HAHATalk.Properties.Settings.Default.LastEmail = SelectedEmail;
+                    HAHATalk.Properties.Settings.Default.Save(); // 파일로 물리적 저장 
+
+                    // 비밀번호 프로퍼티 초기화 
+                    this.Password = string.Empty;
+
 
                     ValidationText = $"{account.Nickname}님 환영합니다!";
 

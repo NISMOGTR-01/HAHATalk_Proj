@@ -72,6 +72,7 @@ namespace HAHATalk.Server.Controllers
                 {
                     RoomId = data.RoomId,
                     SenderId = data.SenderId,
+                    SenderName = data.SenderName,
                     Message = data.Message,
                     MessageType = data.MessageType,
                     SendTime = data.SendTime,
@@ -209,9 +210,9 @@ namespace HAHATalk.Server.Controllers
                     Directory.CreateDirectory(uploadDir);
 
                 var fileName = $"{Guid.NewGuid()}{extension}";
-                var filePaht = Path.Combine(uploadDir, fileName);
+                var filePah = Path.Combine(uploadDir, fileName);
 
-                using (var stream = new FileStream(filePaht, FileMode.Create))
+                using (var stream = new FileStream(filePah, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
                 }

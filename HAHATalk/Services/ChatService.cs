@@ -1,10 +1,11 @@
-﻿using CommonLib.Enums;
+﻿using CommonLib.Dtos;
+using CommonLib.Enums;
 using CommonLib.Models;
-using System.IO;
 using System.IO;
 using System.IO.Packaging;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace HAHATalk.Services
 {
@@ -18,12 +19,24 @@ namespace HAHATalk.Services
             this._httpClient = httpClient;
         }
 
+        // 채팅 리스트 가져오기 
         public async Task<List<ChatList>> GetChatListAsync(string email)
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<List<ChatList>>(
+                var list = await _httpClient.GetFromJsonAsync<List<ChatList>>(
                     $"{BaseUrl}/list/{email}") ?? new();
+
+                foreach(var item in list)
+                {
+                    // 서버 API가 User 테이블과 JOIN해서 ProfileImg를 넣어줌 
+                    if(!string.IsNullOrEmpty(item.ProfileImg))
+                    {
+                        item.ProfileImg = GetServerFullUrl(item.ProfileImg);
+                    }
+                }
+
+                return list;
             }
             catch
             {
@@ -31,6 +44,7 @@ namespace HAHATalk.Services
             }
         }
 
+        // 채팅 History 가져오기 
         public async Task<List<ChatMessage>> GetChatHistoryAsync(string roomId)
         {
             try
@@ -38,16 +52,18 @@ namespace HAHATalk.Services
                 // 1. 서버에서 히스토리 목록을 가져옵니다.
                 var messages = await _httpClient.GetFromJsonAsync<List<ChatMessage>>($"{BaseUrl}/history/{roomId}") ?? new();
 
-                // 2. [핵심] 재로그인 시 이미지가 보이도록 경로를 조립합니다.
+                // 2. 재로그인 시 이미지가 보이도록 경로를 조립합니다.
                 foreach (var msg in messages)
                 {
-                    // 타입이 이미지(1)이고, 경로가 DB에 저장된 상대경로(/uploads...)라면
-                    if (msg.MessageType == (int)ChatMessageTypes.Image &&
-                        !string.IsNullOrEmpty(msg.FilePath) &&
-                        msg.FilePath.StartsWith("/uploads"))
+                    // [수정] 이미지(2) 외에 동영상(3), 파일(4) 등 파일 경로가 포함된 모든 타입 처리
+                    if (!string.IsNullOrEmpty(msg.FilePath) && msg.FilePath.StartsWith("/uploads"))
                     {
-                        // GetServerFullUrl을 호출하여 완전한 주소(http://...)로 변환합니다.
                         msg.FilePath = GetServerFullUrl(msg.FilePath);
+                    }
+
+                    if (!string.IsNullOrEmpty(msg.SenderProfile) && msg.SenderProfile.StartsWith("/uploads"))
+                    {
+                        msg.SenderProfile = GetServerFullUrl(msg.SenderProfile);
                     }
                 }
 
@@ -59,17 +75,6 @@ namespace HAHATalk.Services
                 return new List<ChatMessage>();
             }
 
-            /*
-            try
-            {
-                return await _httpClient.GetFromJsonAsync<List<ChatMessage>>($"{BaseUrl}/history/{roomId}") ?? new();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"히스토리 로드 실패: {ex.Message}");
-                return new List<ChatMessage>();
-            }
-            */
         }
 
         public async Task<int> GetTotalUnreadCountAsync(string email)
@@ -89,8 +94,13 @@ namespace HAHATalk.Services
             try
             {
                 var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/save", message);
-                return response.IsSuccessStatusCode;
 
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"@@@ DB 저장 실패: {error}");
+                }
+                return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
@@ -112,6 +122,8 @@ namespace HAHATalk.Services
                 {
                     RoomId = message.RoomId,
                     SenderId = message.SenderId,
+                    SenderName = myNickname,            // 발신자 닉네임 명시
+                    SenderProfile = message.SenderProfile,  // 프로필 이미지 경로 누락 주의
                     Message = message.Message,
                     MessageType = message.MessageType,
                     SendTime = message.SendTime,
@@ -164,8 +176,8 @@ namespace HAHATalk.Services
             {
                 using var content = new MultipartFormDataContent();
                 // 파일을 읽어서 스트림으로 변환 한다 
-                var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read);
-                var fileContent = new StreamContent(fileStream);
+                using var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read);
+                using var fileContent = new StreamContent(fileStream);
 
                 // 서버의 IFormFile "file"과 이름 일치시기키 
                 content.Add(fileContent, "file", Path.GetFileName(localPath));
@@ -193,13 +205,48 @@ namespace HAHATalk.Services
         {
             if (string.IsNullOrEmpty(relativeUrl)) return string.Empty;
 
-            // HttpClient에 설정된 BaseAddress(예: https://127.0.0.1:7119/)를 가져옵니다.
+            // HttpClient에 설정된 BaseAddress를 가져옵니다.
             var baseAddr = _httpClient.BaseAddress?.ToString().TrimEnd('/');
 
             // 상대 경로가 /로 시작하지 않으면 붙여줍니다.
             var path = relativeUrl.StartsWith("/") ? relativeUrl : "/" + relativeUrl;
 
             return $"{baseAddr}{path}";
+        }
+
+        public async Task<FileUploadResponseDto> UploadFileExtendedAsync(string localFilePath)
+        {
+            try
+            {
+                if (!File.Exists(localFilePath)) return null;
+
+                // BaseUrl은 "api/Chat"이므로 "/upload-file"만 붙여주면 됩니다.
+                var requestUrl = $"{BaseUrl}/upload-file";
+
+                using var content = new MultipartFormDataContent();
+                // [수정] StreamContent가 사용하는 Stream을 using으로 묶어 확실히 해제
+                using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
+                using var fileContent = new StreamContent(fileStream);
+
+                content.Add(fileContent, "file", Path.GetFileName(localFilePath));
+
+                // [수정] PatchAsync -> PostAsync (서버 컨트롤러가 Post이므로)
+                var response = await _httpClient.PostAsync(requestUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // ReadFromJsonAsync는 기본적으로 대소문자를 구분하지 않아 안전합니다.
+                    return await response.Content.ReadFromJsonAsync<FileUploadResponseDto>();
+                }
+
+                var error = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"[UploadFileExtended] 서버 에러: {response.StatusCode}, {error}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UploadFileExtended] 예외 발생: {ex.Message}");
+            }
+            return null;
         }
 
         // 응답을 받기 위한 내부 클래스 

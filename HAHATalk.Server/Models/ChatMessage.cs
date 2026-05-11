@@ -25,7 +25,7 @@ namespace HAHATalk.Server.Models
         // 상태 및 타입 (MSSQL 기본값 0 설정과 매칭) 
         public bool? IsRead { get; set; } = false;
 
-        public int? MessageType { get; set; } = 0;
+        public int MessageType { get; set; } = 0;
 
         // 파일 관련 
         public string? FilePath { get; set; }

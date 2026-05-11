@@ -1,4 +1,5 @@
 ﻿using CommonLib.Models;
+using CommonLib.Dtos;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -26,6 +27,9 @@ namespace HAHATalk.Services
 
         //2026.05.09 Add
         string GetServerFullUrl(string relativeUrl);
+
+        // 2026.05.11 Add 
+        Task<FileUploadResponseDto> UploadFileExtendedAsync(string localFilePath);
 
     }
 }

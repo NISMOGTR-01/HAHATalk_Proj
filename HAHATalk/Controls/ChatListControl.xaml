@@ -65,14 +65,17 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Ellipse Grid.Column="0" Width="48"
-                                 Height="48" HorizontalAlignment="Left">
-                            <Ellipse.Fill>
-                                <ImageBrush ImageSource="{Binding ProfileImg, 
-                                    FallbackValue='/Assets/default_Profile.png'}"
-                                            Stretch="UniformToFill"/>
-                            </Ellipse.Fill>
-                        </Ellipse>
+                        <Border Grid.Column="0" 
+                                Width="48" Height="48" 
+                                CornerRadius="24" 
+                                ClipToBounds="True" 
+                                Background="#E0E0E0" 
+                                HorizontalAlignment="Left">
+                            <Image Source="{Binding ProfileImg, IsAsync=True, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" 
+                                    Stretch="UniformToFill"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
+                        </Border>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center"
                                     Margin="10 0 5 0">

@@ -1,13 +1,16 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
+using HAHATalk.Services;
 using HAHATalk.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Text;
 using WPFLib.Controls;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace HAHATalk.ViewModels
 {
@@ -18,6 +21,8 @@ namespace HAHATalk.ViewModels
         private readonly MainNavigationStore _navigationStore;
         // 2026.04.29 서비스 제공자 필드추가 
         private readonly IServiceProvider _serviceProvider; 
+        // 2026.05.11 
+        private readonly IChatService _chatService; // 추가 주입 (전역 안 읽은 메세지 관리용) 
 
         [ObservableProperty]
         private INotifyPropertyChanged _currentViewModel = default!;
@@ -36,20 +41,54 @@ namespace HAHATalk.ViewModels
 
         public MainViewModel(MainNavigationStore mainNavigationStore, 
             UserStore userStore,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider, 
+            IChatService chatService)
         {
             _navigationStore = mainNavigationStore;
             _userStore = userStore; // XAML에서 UserStore.TotalUnreadCount에 접근 가능 
             _serviceProvider = serviceProvider;
+            _chatService = chatService;
 
             // Store 이벤트 구독 
             _navigationStore.CurrentViewModelChanged += CurrentViewModelChanged;
             _navigationStore.SlideTypeChanged += SlideTypeChanged;
 
+          
+            // MainViewModel.cs 생성자에 추가
+            // 어떤 화면에 있더라도 새 메세지가 오면 count 갱신 
+            WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
+            {
+                // 어떤 화면에 있든 상관없이 메시지가 오면 카운트 갱신
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    await UpdateTotalUnreadCount();
+                });
+            });
+
+            // 2026.05.12 상대방이 메시지를 읽어 카운트가 줄어들었을 때도 반영
+            WeakReferenceMessenger.Default.Register<MessagesReadMessage>(this, (r, m) =>
+            {
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    await UpdateTotalUnreadCount();
+                });
+            });
+
             // 앱 시작할때 초기화면 설정 (로그인) 
             NavigateToLogin();
 
-            
+        }
+
+        /// <summary>
+        /// DB에서 전체 안 읽은 메시지 수를 가져와 UserStore를 갱신합니다.
+        /// </summary>
+        private async Task UpdateTotalUnreadCount()
+        {
+            if (!string.IsNullOrEmpty(_userStore.CurrentUserEmail))
+            {
+                // ChatService를 MainViewModel에도 주입받아야 합니다.
+                _userStore.TotalUnreadCount = await _chatService.GetTotalUnreadCountAsync(_userStore.CurrentUserEmail);
+            }
         }
 
         private void CurrentViewModelChanged(INotifyPropertyChanged viewModel)
@@ -67,17 +106,15 @@ namespace HAHATalk.ViewModels
             else
             {
                 IsSideBarVisible = true;
+                // 사이드바가 나타나는 시점(로그인 성공 후 메인 진입 시)에 카운트 초기 로드
+                _ = UpdateTotalUnreadCount();
             }
         }
-
-
 
         private void SlideTypeChanged(SlideType slideType)
         {
             SlideType = slideType;
         }
-
-
 
         // 사이드바 전용 커맨드 
 
@@ -131,6 +168,10 @@ namespace HAHATalk.ViewModels
         [RelayCommand]
         public void Logout()
         {
+            // 2026.05.12 로그아웃 시 전역 데이터 초기화
+            _userStore.TotalUnreadCount = 0;
+            _userStore.CurrentUserEmail = string.Empty;
+
             _navigationStore.SlideType = SlideType.LeftToRight;
 
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>();

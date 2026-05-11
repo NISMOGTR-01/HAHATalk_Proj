@@ -22,7 +22,7 @@ namespace CommonLib.Models
         [ObservableProperty]
         private string _message;
         [ObservableProperty]
-        private int _messageType; // 0: 텍스트, 1: 이미지 등 (확장용)
+        private int _messageType = 0; // 0: 텍스트, 1: 이미지 등 (확장용)
 
         // 2026.04.07 
         [ObservableProperty]
@@ -42,7 +42,7 @@ namespace CommonLib.Models
         [ObservableProperty]
         private string _profilePath;
         [ObservableProperty]
-        public string _messageGuid; 
+        private string _messageGuid; 
 
         // 전송 상태를 정의하는 enum 
         public enum MessageStatus
@@ -55,6 +55,10 @@ namespace CommonLib.Models
         // DB의 SendState 컬럼과 mapping 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(Status))] // SendState가 바뀌면 Status 속성도 알림
+        [NotifyPropertyChangedFor(nameof(Opacity))]
+        [NotifyPropertyChangedFor(nameof(IsLoading))]
+        [NotifyPropertyChangedFor(nameof(IsRetryVisible))]
+        [NotifyPropertyChangedFor(nameof(IsStatusSucess))]
         private int _sendState = (int)MessageStatus.Success;
 
         // UI 바인딩용 가독성 속성 
@@ -81,5 +85,15 @@ namespace CommonLib.Models
         // View에서 Binding 읽기 전용 시간 포맷 
         // 오전 / 오후가 나오도록 반영하는 부분 
         public string FormattedTime => SendTime.ToString("t"); // "오전 11:30"
+
+
+        // ⚠️ public 필드에서 private 필드로 수정 및 명칭 통일
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayProfile))]
+        private string _senderProfile = null;
+
+        public string? DisplayProfile => string.IsNullOrEmpty(SenderProfile)
+            ? "pack://application:,,,/HAHATalk;component/Assets/basic_Profile.png"
+            : SenderProfile;
     }
 }

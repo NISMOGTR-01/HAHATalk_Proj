@@ -38,7 +38,7 @@
                 Background="White"
                 WaterMarkText="비밀번호를 입력하세요."
                 WaterMarkTextColor="Blue"
-                Password="12345"
+                Password=""
                 Height="{StaticResource MainElementHeight}"
                 Margin="0 5 0 0"/>
 

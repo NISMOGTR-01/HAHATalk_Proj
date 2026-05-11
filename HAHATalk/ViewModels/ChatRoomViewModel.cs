@@ -9,6 +9,7 @@ using HAHATalk.Stores;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.IO.Packaging;
 using System.Windows.Data;
 
 namespace HAHATalk.ViewModels
@@ -45,7 +46,10 @@ namespace HAHATalk.ViewModels
 
         // 2026.04.29 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ParticipantIcon))] // Count 변경 시 Icon도 갱신 알림
         private int _participantCount = 2; // 기본 2로 설정 
+
+        public string ParticipantIcon => ParticipantCount > 2 ? "GroupIconPath" : "SingleUserIconPath";
 
         // 생성자 : 누구와의 채팅방인지 정보를 받음 
         public ChatRoomViewModel(
@@ -60,11 +64,16 @@ namespace HAHATalk.ViewModels
         {
             RoomId = roomId;
             _targetId = targetId;
-            _targetName = targetName;
-            _targetProfile = targetProfile;
+            _targetName = targetName;     
             _chatService = chatService;
             _userStore = userStore;
             _signalRService = signalRService;
+
+            // 기존의 복잡한 if-else 대신 ChatService의 메서드를 호출.
+            var fullUrl = _chatService.GetServerFullUrl(targetProfile);
+
+            // URL이 비어있거나 변환에 실패했다면 기본 이미지 할당
+            TargetProfile = fullUrl;
 
             // 컬렉션 동기화 설정 (다른 스레드에서 Add 해도 에러 안나게 ) 
             BindingOperations.EnableCollectionSynchronization(Messages, new object());
@@ -100,20 +109,60 @@ namespace HAHATalk.ViewModels
                     {
                         RoomId = incoming.RoomId,
                         SenderId = incoming.SenderId,
-                        SenderName = incoming.SenderName,
+                        // 이름 보정: 서버에서 온 이름이 이메일이면, 생성자에서 받은 TargetName(닉네임) 사용
+                        SenderName = (string.IsNullOrEmpty(incoming.SenderName) || incoming.SenderName.Contains("@"))
+                                     ? TargetName : incoming.SenderName,
+
+                        // ★ 여기도 ProfilePath가 아니라 SenderProfile로 변경!
+                        SenderProfile = !string.IsNullOrEmpty(incoming.SenderProfile)
+                                ? _chatService.GetServerFullUrl(incoming.SenderProfile)
+                                : (TargetProfile ?? ""),
+
                         Message = incoming.Message,
                         MessageType = incoming.MessageType, //2026.05.08 텍스트인지 파일인지 
-                        FilePath = incoming.FilePath,                        
+                        FilePath = incoming.FilePath,
                         SendTime = m.Message.SendTime,
                         IsRead = IsWindowActive, // 내가 보고 있으면 true, 아니면 false
                         IsMine = false
                     };
 
+                    // 이미지 경로 보정
+                    if (newMessage.MessageType == (int)ChatMessageTypes.Image && !string.IsNullOrEmpty(newMessage.FilePath))
+                    {
+                        if (!newMessage.FilePath.StartsWith("http"))
+                            newMessage.FilePath = _chatService.GetServerFullUrl(newMessage.FilePath);
+                    }
+
                     // 2. 리스트에 추가
                     Messages.Add(newMessage);
 
-                    // 3. 🔥 핵심: 내가 창을 보고 있다면 즉시 '읽음' 신호를 서버에 쏜다!
-                    // 이 로직이 실행되어야 기로로(상대방)의 '1'이 즉시 사라집니다.
+                    // -----------------------------------------------------------
+                    // 🔥 [추가 항목 1] 내 로컬 DB의 채팅 목록(마지막 메시지, 안 읽은 개수) 업데이트
+                    // 이 메서드를 호출해야 DB의 UnreadCount가 1 올라갑니다.
+                    await _chatService.UpdateChatListAsync(
+                        newMessage,
+                        _targetId,
+                        _targetName,
+                        _userStore.CurrentUserId,
+                        _userStore.CurrentUserNickname);
+
+                    // 🔥 [추가 항목 2] 메인 화면(MainViewModel) 및 왼쪽 메뉴 뱃지 갱신 신호 발송
+                    // 이 신호를 쏴줘야 목록의 주황색 숫자와 왼쪽 아이콘 숫자가 즉시 바뀝니다.
+                    WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+                    // -----------------------------------------------------------
+
+                    // [추가] 만약 내가 창을 보고 있지 않다면, MainViewModel이 배지 숫자를 새로고침 하도록 유도
+                    // MainViewModel은 NewMessageReceivedMessage를 구독 중이므로, 
+                    // 전체 안 읽은 개수를 다시 계산하게 됩니다.
+                    if (!IsWindowActive)
+                    {
+                        // 사실 Messenger는 BroadCast 방식이라 이미 MainViewModel에 전달되었겠지만,
+                        // 확실하게 하기 위해 DB 업데이트 이후 한 번 더 카운트 업데이트 메서드를 실행하게 유도하거나
+                        // MainViewModel이 듣고 있는 다른 신호를 보낼 수도 있습니다.
+                        // 일단 위에서 UpdateChatListAsync가 끝난 후 신호를 보내는 것이 안전합니다.
+                    }
+
+                    // 3. 내가 창을 보고 있다면 즉시 '읽음' 신호를 서버에 쏜다!                   
                     if (IsWindowActive)
                     {
                         try
@@ -122,6 +171,9 @@ namespace HAHATalk.ViewModels
                             await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
                             // 기로로에게 실시간 알림 전송
                             await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+
+                            // 읽었으니 숫자를 다시 0으로 만들기 위해 목록 갱신
+                            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());                            
                         }
                         catch (Exception ex)
                         {
@@ -176,10 +228,17 @@ namespace HAHATalk.ViewModels
                             // 내 이메일과 발신자 이메일을 비교해서 IsMine 세팅 
                             msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
 
-                            // 2024.04.20 내가 보낸 게 아니라면 상대방 이름을 꽃아줌 
-                            if (!msg.IsMine)
+                            // [수정] 메세지 타입이 이미지(1)인 경우 체크
+                            if (msg.MessageType == (int)ChatMessageTypes.Image || msg.MessageType == 1)
                             {
-                                msg.SenderName = TargetName;
+                                if (!string.IsNullOrEmpty(msg.FilePath))
+                                {
+                                    // 경로가 상대경로라면 풀 경로로 만들어줌
+                                    if (!msg.FilePath.StartsWith("http"))
+                                    {
+                                        msg.FilePath = _chatService.GetServerFullUrl(msg.FilePath);
+                                    }
+                                }
                             }
 
                             Messages.Add(msg);
@@ -190,8 +249,6 @@ namespace HAHATalk.ViewModels
                     bool hasUnreadFromTarget = dbMessages?.Any(m => m.SenderId == _targetId && !m.IsRead) ?? false;
 
                     // 내가 읽어야 할 메세지가 있을 때만 서버에서 '읽음' 보고 
-
-
                     if (hasUnreadFromTarget)
                     {
                         // [읽음 처리 추가] 히스토리 로드 후 서버에 읽음 보고 및 상대방 알림
@@ -240,34 +297,10 @@ namespace HAHATalk.ViewModels
             // 서버 전송 및 DB 저장 로직 수행 
             try
             {
-                // 메세지 저장 요청 
-                bool saveSuccess = await _chatService.SaveMessageAsync(myMsg);
-
-                // 2) 내 목록 & 상대방 목록 업데이트 
-                if (saveSuccess)
-                {
-                    // 채팅목록 업데이트 (상대방 / 내 목록 최신화) 
-                    bool listUpdated = await _chatService.UpdateChatListAsync(
-                    myMsg,
-                    TargetId,
-                    TargetName,
-                    _userStore.CurrentUserId,
-                    _userStore.CurrentUserNickname
-                    );
-
-                    // 2026.04.14 처음 채팅이라면 목록 새로고침 알림 
-                    if (listUpdated)
-                    {
-                        WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
-                    }
-
-                    await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
-                }
-                else
-                {
-                    // 서버에서 저장 실패 응답이 온 경우 
-                    myMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
-                }
+               
+                 await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
+  
+                
             }
             catch (Exception ex)
             {
@@ -327,137 +360,116 @@ namespace HAHATalk.ViewModels
 
         private async Task SendFileMessageAsync(string originFileName, string localFilePath)
         {
+            // 메세지 타입 설정 
+            int initialMessageType = GetInitialMessageType(originFileName);
 
-            // 1. [로컬 우선 전시] 내 화면엔 로컬 경로로 즉시 추가
+            // 1. [UI 즉시 반영] 전송 중 상태로 목록에 먼저 추가
             var myMsg = new ChatMessage
             {
                 MessageGuid = Guid.NewGuid().ToString(),
                 RoomId = RoomId,
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
-                Message = "사진을 보냈습니다.",
-                MessageType = (int)ChatMessageTypes.Image,
-                FilePath = localFilePath,
+                SenderProfile = _userStore.CurrentUserProfile,  // 내 프로필 추가 
+                Message = "파일을 보내는 중....",
+                MessageType = initialMessageType,
+                FileName = originFileName,
+                FilePath = localFilePath, // UI 선반영용 로컬 경로
                 SendTime = DateTime.Now,
                 IsMine = true,
                 SendState = (int)ChatMessage.MessageStatus.Sending
             };
 
+            // UI 스레드에서 안전하게 추가
             App.Current.Dispatcher.Invoke(() => Messages.Add(myMsg));
 
             try
             {
-                // 2. 서버 업로드 (상대 경로 반환: /uploads/...)
-                string serverRelativeUrl = await _chatService.UploadFileAsync(localFilePath);
+                // 2. 서버 파일 업로드 및 타입 정보 수신
+                // ChatService.UploadFileAsync가 이제 url뿐만 아니라 messageType도 반환하도록 수정되었다고 가정합니다.
+                // 만약 string만 반환한다면, 아래 주석처럼 DTO를 받도록 ChatService를 살짝 수정해야 합니다.
+                var uploadResult = await _chatService.UploadFileExtendedAsync(localFilePath);
 
-                if (!string.IsNullOrEmpty(serverRelativeUrl))
+                if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Url))
                 {
-                    // 3. [주소 조립] 하드코딩 없이 서버 베이스 주소 결합
-                    // _chatService 내부나 공통 상수에 정의된 ServerBaseUrl을 사용하세요.
-                    string fullUrl = _chatService.GetServerFullUrl(serverRelativeUrl);
+                    throw new Exception("서버 업로드 실패");
+                }
 
+                string fullUrl = _chatService.GetServerFullUrl(uploadResult.Url);
+                int finalMessageType = uploadResult.MessageType; // 서버가 결정해준 타입 (이미지/비디오/파일)
+
+                // 3. UI 객체 정보 업데이트
+                myMsg.MessageType = finalMessageType;
+                myMsg.FilePath = fullUrl;
+                myMsg.Message = GetMessageByTypeName(finalMessageType); // 타입에 따른 문구 자동 세팅
+
+                // 4. DB 저장용 객체 생성
+                var dbSaveMsg = new ChatMessage
+                {
+                    RoomId = myMsg.RoomId,
+                    SenderId = myMsg.SenderId,
+                    SenderName = myMsg.SenderName,
+                    SenderProfile = myMsg.SenderProfile,
+                    Message = myMsg.Message,
+                    MessageType = finalMessageType,
+                    FilePath = fullUrl,
+                    FileName = originFileName,
+                    SendTime = myMsg.SendTime,
+                    MessageGuid = myMsg.MessageGuid,
+                    IsRead = false
+                };
+
+                // DB 저장 시도
+                bool isSaved = await _chatService.SaveMessageAsync(dbSaveMsg);
+
+                if (isSaved)
+                {
                     myMsg.SendState = (int)ChatMessage.MessageStatus.Success;
 
-                    // 4. [DB 저장] DB에는 조립된 전체 URL 저장
-                    var dbSaveMsg = new ChatMessage
-                    {
-                        RoomId = myMsg.RoomId,
-                        SenderId = myMsg.SenderId,
-                        Message = myMsg.Message,
-                        MessageType = myMsg.MessageType,
-                        FilePath = fullUrl, // 전체 URL
-                        FileName = myMsg.FileName,
-                        SendTime = myMsg.SendTime,
-                        MessageGuid = myMsg.MessageGuid,
-                        IsRead = false
-                    };
-                    await _chatService.SaveMessageAsync(dbSaveMsg);
-
-                    // 5. [상대방 전송] 기로로에게 전체 URL 전송
+                    // SignalR용 DTO 생성
                     var msgDto = new CommonLib.Dtos.ChatMessageDto
                     {
+                        MessageGuid = myMsg.MessageGuid,
                         RoomId = RoomId,
                         SenderId = _userStore.CurrentUserId,
                         SenderName = _userStore.CurrentUserNickname,
                         Message = myMsg.Message,
-                        MessageType = myMsg.MessageType,
+                        MessageType = finalMessageType,
                         FilePath = fullUrl,
                         FileName = originFileName,
-                        SendTime = myMsg.SendTime,
-                        MessageGuid = myMsg.MessageGuid
+                        SendTime = myMsg.SendTime
                     };
 
                     await _signalRService.SendDtoMessageAsync(msgDto, TargetId);
                     await _chatService.UpdateChatListAsync(myMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);
                 }
+                else
+                {
+                    myMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"이미지 전송 실패: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[파일 전송 에러] {ex.Message}");
                 myMsg.SendState = (int)ChatMessage.MessageStatus.Fail;
+                myMsg.Message = "전송 실패";
             }
 
+        }
 
-
-            /*
-            // Model 생성 
-            var chatMessage = new ChatMessage
+        /// <summary>
+        /// 메시지 타입(이미지, 비디오, 파일 등)에 따라 UI에 표시될 요약 문구를 반환합니다.
+        /// </summary>
+        private string GetMessageByTypeName(int type)
+        {
+            // CommonLib.Enums.ChatMessageTypes 사용
+            return (ChatMessageTypes)type switch
             {
-                MessageGuid = Guid.NewGuid().ToString(),
-                RoomId = RoomId,
-                SenderId = _userStore.CurrentUserId,
-                SenderName = _userStore.CurrentUserNickname,
-                Message = originFileName,
-                MessageType = (int)ChatMessageTypes.Image,
-                FilePath = destinationFile,
-                FileName = originFileName,
-                SendTime = DateTime.Now,
-                IsMine = true,
-                IsRead = false
+                ChatMessageTypes.Image => "사진을 보냈습니다.",
+                ChatMessageTypes.Video => "동영상을 보냈습니다.",
+                ChatMessageTypes.File => "파일을 보냈습니다.",
+                _ => "메시지를 보냈습니다." // 기본값 (Text 등)
             };
-
-            // DB 저장 (Repository 호출) 
-            bool isSaved = await _chatService.SaveMessageAsync(chatMessage);
-
-            if (isSaved == true)
-            {
-                // 내 목록 & 상태 목록 업데이트 
-                await _chatService.UpdateChatListAsync(
-                chatMessage,
-                TargetId,
-                TargetName,
-                _userStore.CurrentUserId,
-                _userStore.CurrentUserNickname
-                );
-
-                // 상대방에게 실시간으로 DTO 전송 
-                var msgDto = new CommonLib.Dtos.ChatMessageDto
-                {
-                    RoomId = RoomId,
-                    SenderId = _userStore.CurrentUserId,
-                    SenderName = _userStore.CurrentUserNickname,
-                    Message = originFileName, 
-                    MessageType = chatMessage.MessageType,
-                    FilePath = destinationFile,
-                    SendTime = chatMessage.SendTime
-                };
-               
-
-                try
-                {
-                    // msgDto에 FilePath MessageTyep이 모두 포함
-                    // 상대방도 메세지를 볼수 있음 
-                    await _signalRService.SendDtoMessageAsync(msgDto, TargetId);
-                }
-                catch(Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"이미지 실시간 전송 실패: {ex.Message}");
-                }
-
-                // UI 콜렉션에 추가 (내 화면에 띄우기) 
-                App.Current.Dispatcher.Invoke(() => Messages.Add(chatMessage));
-            }
-            */
         }
 
         // 2026.04.08 Add 
@@ -570,11 +582,23 @@ namespace HAHATalk.ViewModels
                     await _chatService.UpdateChatListAsync(failedMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);
 
                     // 메세지 타입에 따른 분기 처리 
-                    if (failedMsg.MessageType == 1)
+                    if (failedMsg.MessageType == (int)ChatMessageTypes.Image)
                     {
-                        // 이미지는 파일 경로 정보를 포함하여 전송 
-                        //await _signalRService.sen
-                    }
+                        // SignalR용 DTO 생성 및 전송
+                        var msgDto = new CommonLib.Dtos.ChatMessageDto
+                        {
+                            MessageGuid = failedMsg.MessageGuid,
+                            RoomId = RoomId,
+                            SenderId = failedMsg.SenderId,
+                            SenderName = failedMsg.SenderName,
+                            Message = failedMsg.Message,
+                            MessageType = failedMsg.MessageType,
+                            FilePath = failedMsg.FilePath, // 전체 경로
+                            FileName = failedMsg.FileName,
+                            SendTime = failedMsg.SendTime
+                        };
+                        await _signalRService.SendDtoMessageAsync(msgDto, TargetId);
+                    }
                     else
                     {
                         await _signalRService.SendMessageAsync(RoomId, TargetId, failedMsg.Message);
@@ -611,6 +635,20 @@ namespace HAHATalk.ViewModels
             {
                 ParticipantCount = count;
             });
+        }
+
+        // 2026.05.12 Add (첨부하는 파일에 따라서 ChatMessageType 이 변경 
+        // 파일 확장자를 분석하여 적절한 메세지 타입을 반환 
+        private int GetInitialMessageType(string fileName)
+        {
+            string extension = Path.GetExtension(fileName).ToLower();
+
+            return extension switch
+            {
+                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => (int)ChatMessageTypes.Image,
+                ".mp4" or ".avi" or ".mov" => (int)ChatMessageTypes.Video,
+                _ => (int)ChatMessageTypes.File // 그 외 모든 것은 일반 파일
+            };
         }
     }
 }

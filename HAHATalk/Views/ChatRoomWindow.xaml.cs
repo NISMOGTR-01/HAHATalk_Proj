@@ -13,6 +13,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Collections.Specialized;
 using HAHATalk.Controls; // 2025.04.20 추가 
+using System.Linq;
 
 namespace HAHATalk.Views
 {
@@ -118,9 +119,21 @@ namespace HAHATalk.Views
         // 채팅창 드래그 기능 (상단 헤더)  
         private void Header_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // 왼쪽 버튼을 눌렸을 때만 실행 
             if(e.ChangedButton == MouseButton.Left)
             {
-                this.DragMove(); 
+                // 마우스 왼쪽 버튼 상태가 실제로 'Pressed'인지 다시한번 확인 
+                if(e.LeftButton == MouseButtonState.Pressed)
+                {
+                    try
+                    {
+                        this.DragMove();
+                    }
+                    catch(InvalidOperationException)
+                    {
+
+                    }
+                }
             }
         }
 
