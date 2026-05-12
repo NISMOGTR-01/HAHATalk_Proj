@@ -136,8 +136,17 @@ namespace HAHATalk.ViewModels
         [RelayCommand]
         public void NavigateToChatList()
         {
+            // 기존의 단순한 코드를 아래처럼 보완하는 겁니다.
             _navigationStore.SlideType = SlideType.RightToLeft;
-            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<ChatListControlViewModel>(); 
+
+            // 1. 서비스 제공자로부터 뷰모델을 명확히 가져오고
+            var vm = _serviceProvider.GetRequiredService<ChatListControlViewModel>();
+
+            // 2. 현재 화면을 교체한 뒤
+            _navigationStore.CurrentViewModel = (INotifyPropertyChanged)vm;
+
+            // 3. 채팅 리스트 뷰모델에게 "야, 화면 떴으니까 데이터 새로 불러와!"라고 신호를 쏴주는 겁니다.
+            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
         }
 
 

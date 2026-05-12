@@ -79,7 +79,7 @@ namespace HAHATalk.ViewModels
             BindingOperations.EnableCollectionSynchronization(Messages, new object());
 
             // 2026.04.17 실시간 메세지 수신 이벤트 등록 
-            _signalRService.MessageReceived += OnMessageReceived;
+            //_signalRService.MessageReceived += OnMessageReceived; (2026.05.13 주석처리) 
 
             // ChatHub에서 JoinRoom 호출) 
             Task.Run(async () => await _signalRService.JoinRoom(RoomId));
@@ -99,6 +99,12 @@ namespace HAHATalk.ViewModels
                 // 내가 보낸 메시지가 다시 돌아온 경우 
                 if (m.Message.SenderId == _userStore.CurrentUserEmail) 
                     return;
+
+                // 이미 리스트에 존재하는 메시지인지 Guid로 체크 (2026.05.13) 
+                if(Messages.Any(x => x.MessageGuid == m.Message.MessageGuid))
+                {
+                    return;
+                }
 
                 var incoming = m.Message;
 
@@ -298,9 +304,11 @@ namespace HAHATalk.ViewModels
             try
             {
                
-                 await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
-  
-                
+                await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
+                await _chatService.UpdateChatListAsync(myMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);                
+
+                WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+
             }
             catch (Exception ex)
             {

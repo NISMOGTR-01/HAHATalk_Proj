@@ -16,5 +16,7 @@ namespace CommonLib.Models
 
         // Signal R 장착 할 경우 추가 정보 (ex: 상대방 ID) 
         public string TargetId { get; set; } = string.Empty;
-     }
+
+        public int MessageType { get; set; } = 0;
+    }
 }

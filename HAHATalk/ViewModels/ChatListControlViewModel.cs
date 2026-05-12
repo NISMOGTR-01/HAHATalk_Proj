@@ -58,13 +58,12 @@ namespace HAHATalk.ViewModels
             });
 
 
-
-
             // 2026.04.22 누군가 나에게 새 메시지를 보냈을 때 목록 갱신 
             WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
             {
                 App.Current.Dispatcher.Invoke(async () =>
                 {
+                    await Task.Delay(300);
                     // Dapper를 통해 DB에서 최신 목록을 통째로 다시 읽어오기 
                     await LoadChatListAsync();                    
                 });

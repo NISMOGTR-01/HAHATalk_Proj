@@ -49,7 +49,7 @@ namespace HAHATalk.Services
             _connection.On<ChatMessageDto>("ReceiveMessage", (msgDto) =>
             {
                 // 기존 이벤트 방식 지원 (문자열 두개로 분해해서 전달) 
-                MessageReceived?.Invoke(msgDto.SenderId, msgDto.Message);
+                //MessageReceived?.Invoke(msgDto.SenderId, msgDto.Message); (2026.05.13 주석처리) 메세지 중복 
 
 
                 WeakReferenceMessenger.Default.Send(new NewMessageReceivedMessage(msgDto));

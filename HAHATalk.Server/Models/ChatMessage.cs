@@ -32,5 +32,8 @@ namespace HAHATalk.Server.Models
 
         [StringLength(255)]
         public string? FileName { get; set; }
+
+        [StringLength(50)]
+        public string? MessageGuid { get; set; }
     }
 }

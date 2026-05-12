@@ -146,47 +146,40 @@ namespace HAHATalk.Server.Repository
         public async Task<bool> MSSQL_UpdateChatListAsync(ChatMessageDto message, string targetId, string targetName, string myId, string myNickname)
         {
             const string query = @"
-                -- 0. ChatMember 등록
+                -- 0. ChatMember 등록 (동시성 고려)
                 IF NOT EXISTS (SELECT 1 FROM ChatMember WHERE RoomId = @roomId AND UserId = @myId)
                     INSERT INTO ChatMember (RoomId, UserId, JoinTime) VALUES (@roomId, @myId, GETDATE());
                 IF NOT EXISTS (SELECT 1 FROM ChatMember WHERE RoomId = @roomId AND UserId = @targetId)
                     INSERT INTO ChatMember (RoomId, UserId, JoinTime) VALUES (@roomId, @targetId, GETDATE());
 
-                -- 닉네임 가져오기 (Account 테이블 기준 최신화)
+                -- 닉네임 확보 (NULL 방지 보강)
                 DECLARE @RealTargetName NVARCHAR(100) = (SELECT TOP 1 nickname FROM Account WHERE email = @targetId);
                 DECLARE @RealMyNickname NVARCHAR(100) = (SELECT TOP 1 nickname FROM Account WHERE email = @myId);
 
-                SET @RealTargetName = ISNULL(@RealTargetName, @targetName);
-                SET @RealMyNickname = ISNULL(@RealMyNickname, @myNickname);
+                SET @RealTargetName = ISNULL(ISNULL(@RealTargetName, @targetName), 'Unknown');
+                SET @RealMyNickname = ISNULL(ISNULL(@RealMyNickname, @myNickname), 'Unknown');
 
-                -- 상대방이 읽지 않은 메시지 수 계산
+                -- 상대방 안 읽은 메시지 수
                 DECLARE @CurrentCount INT = (SELECT COUNT(*) FROM ChatMessage 
                                              WHERE RoomId = @roomId AND SenderId = @myId AND IsRead = 0);
 
-               -- 1. 내(발신자) 목록 처리
-               IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @myId)
-                   INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
-                   VALUES (@roomId, @myId, @targetId, @RealTargetName, @msgText, @lastTime, 0, 0, @messageType); -- @messageType 추가!
-               ELSE
-                   UPDATE ChatList 
-                   SET LastMessage = @msgText, 
-                       LastTime = @lastTime, 
-                       TargetName = @RealTargetName,
-                       MessageType = @messageType 
-                   WHERE RoomId = @roomId AND OwnerId = @myId;
-               
-               -- 2. 상대방(수신자) 목록 처리
-               IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @targetId)
-                   INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
-                   VALUES (@roomId, @targetId, @myId, @RealMyNickname, @msgText, @lastTime, @CurrentCount, 0, @messageType); -- @messageType 추가!
-               ELSE
-                   UPDATE ChatList 
-                   SET LastMessage = @msgText, 
-                       LastTime = @lastTime, 
-                       UnreadCount = @CurrentCount, 
-                       TargetName = @RealMyNickname,
-                       MessageType = @messageType
-                   WHERE RoomId = @roomId AND OwnerId = @targetId;";
+                -- 1. 내 목록 처리
+                IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @myId)
+                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
+                    VALUES (@roomId, @myId, @targetId, @RealTargetName, @msgText, @lastTime, 0, 0, @messageType);
+                ELSE
+                    UPDATE ChatList 
+                    SET LastMessage = @msgText, LastTime = @lastTime, TargetName = @RealTargetName, MessageType = @messageType
+                    WHERE RoomId = @roomId AND OwnerId = @myId;
+                
+                -- 2. 상대방 목록 처리
+                IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @targetId)
+                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
+                    VALUES (@roomId, @targetId, @myId, @RealMyNickname, @msgText, @lastTime, @CurrentCount, 0, @messageType);
+                ELSE
+                    UPDATE ChatList 
+                    SET LastMessage = @msgText, LastTime = @lastTime, UnreadCount = @CurrentCount, TargetName = @RealMyNickname, MessageType = @messageType
+                    WHERE RoomId = @roomId AND OwnerId = @targetId;";
 
             // CreateConnection() 결과물을 DbConnection으로 캐스팅하여 비동기 메서드 활성화
             using var db = CreateConnection() as System.Data.Common.DbConnection;
@@ -210,13 +203,13 @@ namespace HAHATalk.Server.Repository
                     int rows = await db.ExecuteAsync(query, new
                     {
                         roomId = message.RoomId,
-                        myId,
-                        targetId,
-                        targetName,
-                        myNickname,
-                        msgText = message.Message,
+                        myId = myId,
+                        targetId = targetId,
+                        targetName = targetName ?? "Unknown", // NULL 방어
+                        myNickname = myNickname ?? "Unknown", // NULL 방어
+                        msgText = message.Message ?? "",
                         lastTime = message.SendTime,
-                        messageType = (int)message.MessageType,
+                        messageType = message.MessageType
                     }, transaction: trans);
 
                     // 3. 성공 시 커밋
