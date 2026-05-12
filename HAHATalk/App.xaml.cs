@@ -99,14 +99,15 @@ namespace HAHATalk
             services.AddSingleton<IWindowManager, WindowManager>();
 
             // ViewModels 
-            services.AddTransient<MainViewModel>();
+            services.AddSingleton<MainViewModel>();
             services.AddTransient<LoginControlViewModel>();
             services.AddTransient<SignupControlViewModel>();
             services.AddTransient<ChangePwdControlViewModel>();
             services.AddTransient<FindAccountControlViewModel>();
             services.AddTransient<MainNaviControlViewModel>();
-            services.AddTransient<FriendListControlViewModel>();
-            services.AddTransient<ChatListControlViewModel>();
+
+            services.AddSingleton<FriendListControlViewModel>();
+            services.AddSingleton<ChatListControlViewModel>();
 
             // Views 
             services.AddSingleton(s => new MainView()
