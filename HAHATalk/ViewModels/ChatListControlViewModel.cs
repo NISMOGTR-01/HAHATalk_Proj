@@ -141,13 +141,9 @@ namespace HAHATalk.ViewModels
                 targetChat.TargetName,
                 targetChat.ProfileImg);
 
-
-
             // chatRoom으로 이동하는 함수 
             //_navigationService.Navigate(NaviType.ChatRoom);
-        }
-
-       
+        }      
 
     }
 }
