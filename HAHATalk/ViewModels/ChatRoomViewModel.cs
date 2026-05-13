@@ -221,13 +221,19 @@ namespace HAHATalk.ViewModels
                     if (dbMessages != null)
                     {
                         foreach (var msg in dbMessages)
-                        {
-                            // DB에서 데이터를 가져올 때 
+                        {                            
                             // 내 이메일과 발신자 이메일을 비교해서 IsMine 세팅 
                             msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
 
-                            // [수정] 메세지 타입이 이미지(1)인 경우 체크
-                            if (msg.MessageType == (int)ChatMessageTypes.Image || msg.MessageType == 1)
+                            // 닉네임 누락 방지: 상대방 메시지인데 이름이 비어있으면 TargetName 주입
+                            if (!msg.IsMine && (string.IsNullOrEmpty(msg.SenderName) || msg.SenderName.Contains("@")))
+                            {
+                                msg.SenderName = this.TargetName;
+                                msg.SenderProfile = this.TargetProfile; // 프로필도 같이 보정
+                            }
+
+                            // 텍스트가 아닌 이미지/비디오
+                            if (msg.MessageType != (int)ChatMessageTypes.Text)
                             {
                                 if (!string.IsNullOrEmpty(msg.FilePath))
                                 {
@@ -377,6 +383,7 @@ namespace HAHATalk.ViewModels
                 FilePath = localFilePath, // UI 선반영용 로컬 경로
                 SendTime = DateTime.Now,
                 IsMine = true,
+                IsRead = false, // 명시적으로 false 설정 (UI에 1이 뜬다) 2026.05.13 Add 
                 SendState = (int)ChatMessage.MessageStatus.Sending
             };
 
@@ -425,6 +432,7 @@ namespace HAHATalk.ViewModels
                 if (isSaved)
                 {
                     myMsg.SendState = (int)ChatMessage.MessageStatus.Success;
+                    //myMsg.IsRead = false; // 서버 저장 후에도 여전히 안 읽은 상태임을 보장 
 
                     // SignalR용 DTO 생성
                     var msgDto = new CommonLib.Dtos.ChatMessageDto

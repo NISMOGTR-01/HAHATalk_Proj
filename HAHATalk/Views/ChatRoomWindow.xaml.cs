@@ -22,15 +22,12 @@ namespace HAHATalk.Views
     /// </summary>
     public partial class ChatRoomWindow : Window
     {
-      
-
         public ChatRoomWindow()
         {
             InitializeComponent();          
 
             // DataContext가 변경될 때마다 이벤트 등록 
             this.DataContextChanged += ChatRoomWindow_DataContextChanged;
-
 
             // 창이 닫힐 때 이벤트 해제 (메모리 누수방지) 
             this.Unloaded += (s, e) =>
@@ -39,6 +36,9 @@ namespace HAHATalk.Views
                 {
                     viewModel.Messages.CollectionChanged -= Messages_CollectionChanged;
                 }
+
+                // DataContextChanged 이벤트 자체도 해제하여 참조를 완전히 정리 
+                this.DataContextChanged -= ChatRoomWindow_DataContextChanged;
             };
 
             // 2026.04.22 채팅창이 포커스를 얻었을 때 
@@ -46,25 +46,22 @@ namespace HAHATalk.Views
             {
                 if(this.DataContext is ChatRoomViewModel viewModel)
                 {
+                    // 1. 창이 활성화되면 바로 메시지 입력 가능하게 포커스 이동
+                    MessageInput.Focus();
+
                     viewModel.IsWindowActive = true;
 
-                    // 🔥 수정: '내가 받은 메시지(!IsMine)' 중에서 '안 읽은 것(!IsRead)'만 골라야 합니다.
+                    // 2. 읽음 처리 로직 (기존 유지)
                     var unreadFromPartner = viewModel.Messages
                         .Where(x => !x.IsMine && !x.IsRead)
                         .ToList();
 
                     if (unreadFromPartner.Any())
                     {
-                        foreach(var msg in unreadFromPartner)
-                        {
-                            msg.IsRead = true;
-                        }
-
-                        // 서버와 상대방에게 읽음 신호 전송 
+                        // 서버에 읽었다고 알림
                         await viewModel.MarkAllReadAsync();
                     }
                 }
-
             };
 
             // 창이 focus를 잃은 경우 (다른 창 클릭, 최소화 등) 
@@ -154,14 +151,15 @@ namespace HAHATalk.Views
                 {
                     e.Handled = true; // 엔터가 텍스트박스에 입력되는 걸 막음 (줄바꿈방지) 
 
-                    if(DataContext is ChatRoomViewModel viewModel)
+                    if (DataContext is ChatRoomViewModel viewModel)
                     {
-                        // Command 실행 가능 여부 확인 후 실행 
-                        if(viewModel.SendMessageCommand != null && viewModel.SendMessageCommand.CanExecute(null))
+                        if (viewModel.SendMessageCommand != null && viewModel.SendMessageCommand.CanExecute(null))
                         {
                             viewModel.SendMessageCommand.Execute(null);
-                        }
 
+                            // 메시지 전송 후 다시 포커스를 입력창으로 (계속 타이핑 가능하게)
+                            MessageInput.Focus();
+                        }
                     }
                 }
             }
