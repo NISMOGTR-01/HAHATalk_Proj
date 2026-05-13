@@ -126,10 +126,14 @@ namespace HAHATalk.ViewModels
                         SenderName = (string.IsNullOrEmpty(incoming.SenderName) || incoming.SenderName.Contains("@"))
                                      ? TargetName : incoming.SenderName,
 
-                       
 
-                        // 호환성을 위해 SenderProfile도 유지한다면 그대로 둠
-                        SenderProfile = incoming.SenderProfile,
+
+                        // 수정: 서버에서 온 상대 경로를 풀 URL로 변환하여 할당
+                        SenderProfile = string.IsNullOrEmpty(incoming.SenderProfile)
+                            ? TargetProfile  // 비어있다면 생성자에서 받은 상대방 프로필 사용
+                            : (incoming.SenderProfile.StartsWith("http")
+                                ? incoming.SenderProfile
+                                : _chatService.GetServerFullUrl(incoming.SenderProfile)),
 
                         Message = incoming.Message,
                         MessageType = incoming.MessageType, //2026.05.08 텍스트인지 파일인지 
@@ -144,7 +148,7 @@ namespace HAHATalk.ViewModels
                     Messages.Add(newMessage);
 
                     // -----------------------------------------------------------
-                    // 🔥 [추가 항목 1] 내 로컬 DB의 채팅 목록(마지막 메시지, 안 읽은 개수) 업데이트
+                    // 내 로컬 DB의 채팅 목록(마지막 메시지, 안 읽은 개수) 업데이트
                     // 이 메서드를 호출해야 DB의 UnreadCount가 1 올라갑니다.
                     await _chatService.UpdateChatListAsync(
                         newMessage,
@@ -153,7 +157,7 @@ namespace HAHATalk.ViewModels
                         _userStore.CurrentUserId,
                         _userStore.CurrentUserNickname);
 
-                    // 🔥 [추가 항목 2] 메인 화면(MainViewModel) 및 왼쪽 메뉴 뱃지 갱신 신호 발송
+                    // 메인 화면(MainViewModel) 및 왼쪽 메뉴 뱃지 갱신 신호 발송
                     // 이 신호를 쏴줘야 목록의 주황색 숫자와 왼쪽 아이콘 숫자가 즉시 바뀝니다.
                     WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
                     // -----------------------------------------------------------
@@ -303,6 +307,7 @@ namespace HAHATalk.ViewModels
                 RoomId = RoomId,
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
+                SenderProfile = _userStore.CurrentUserProfile, // 내 프로필 경로 추가 
                 Message = InputMessage,
                 SendTime = DateTime.Now,
                 IsMine = true,
