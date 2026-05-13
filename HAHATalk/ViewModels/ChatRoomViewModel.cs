@@ -119,25 +119,17 @@ namespace HAHATalk.ViewModels
                         SenderName = (string.IsNullOrEmpty(incoming.SenderName) || incoming.SenderName.Contains("@"))
                                      ? TargetName : incoming.SenderName,
 
-                        // ★ 여기도 ProfilePath가 아니라 SenderProfile로 변경!
-                        SenderProfile = !string.IsNullOrEmpty(incoming.SenderProfile)
-                                ? _chatService.GetServerFullUrl(incoming.SenderProfile)
-                                : (TargetProfile ?? ""),
+                        // 서비스에서 이미 조립해서 보냈으므로 그대로 할당 (안전빵으로 null 체크만)
+                        SenderProfile = incoming.SenderProfile ?? TargetProfile,
 
                         Message = incoming.Message,
                         MessageType = incoming.MessageType, //2026.05.08 텍스트인지 파일인지 
+                                                            // [수정] 서비스에서 이미 완성해서 보냈으므로 그대로 받음
                         FilePath = incoming.FilePath,
                         SendTime = m.Message.SendTime,
                         IsRead = IsWindowActive, // 내가 보고 있으면 true, 아니면 false
                         IsMine = false
                     };
-
-                    // 이미지 경로 보정
-                    if (newMessage.MessageType == (int)ChatMessageTypes.Image && !string.IsNullOrEmpty(newMessage.FilePath))
-                    {
-                        if (!newMessage.FilePath.StartsWith("http"))
-                            newMessage.FilePath = _chatService.GetServerFullUrl(newMessage.FilePath);
-                    }
 
                     // 2. 리스트에 추가
                     Messages.Add(newMessage);
@@ -506,7 +498,7 @@ namespace HAHATalk.ViewModels
         private void OnMessageReceived(string senderEmail, string message)
         {
             // 내가 보낸 게 아니고 현재 열려 있는 이 채팅방의 메세지??
-            if (senderEmail == TargetId)
+            if (string.Equals(senderEmail, TargetId, StringComparison.OrdinalIgnoreCase))
             {
                 App.Current.Dispatcher.Invoke(async () =>
                 {

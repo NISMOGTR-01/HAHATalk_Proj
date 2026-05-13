@@ -53,6 +53,16 @@ namespace HAHATalk.Services
                 // 기존 이벤트 방식 지원 (문자열 두개로 분해해서 전달) 
                 //MessageReceived?.Invoke(msgDto.SenderId, msgDto.Message); (2026.05.13 주석처리) 메세지 중복 
 
+                // 실시간 수신 시 파일/프로필 경로를 Full URL로 변환 
+                if (!string.IsNullOrEmpty(msgDto.FilePath) && !msgDto.FilePath.StartsWith("http"))
+                {
+                    msgDto.FilePath = _chatService.GetServerFullUrl(msgDto.FilePath);
+                }
+
+                if (!string.IsNullOrEmpty(msgDto.SenderProfile) && !msgDto.SenderProfile.StartsWith("http"))
+                {
+                    msgDto.SenderProfile = _chatService.GetServerFullUrl(msgDto.SenderProfile);
+                }
 
                 WeakReferenceMessenger.Default.Send(new NewMessageReceivedMessage(msgDto));
 
@@ -187,9 +197,6 @@ namespace HAHATalk.Services
                 System.Diagnostics.Debug.WriteLine($"SignalR File Send Error: {ex.Message}");
             }
         }
-
-
-
 
         public async Task SendDtoMessageAsync(ChatMessageDto dto, string targetEmail)
         {
