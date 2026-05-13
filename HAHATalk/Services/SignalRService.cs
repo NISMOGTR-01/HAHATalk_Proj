@@ -19,14 +19,16 @@ namespace HAHATalk.Services
         private readonly HubConnection _connection;
         private readonly UserStore _userStore;
         private readonly ApiSettings _apiSettings; // 설정 클래스 추가 
+        private readonly IChatService _chatService;
 
         // 이벤트 정의 
         public event Action<string, string>? MessageReceived;
 
-        public SignalRService(UserStore userStore, ApiSettings apiSettings)
+        public SignalRService(UserStore userStore, ApiSettings apiSettings, IChatService chatService)
         {
             _userStore = userStore;
             _apiSettings = apiSettings;
+            _chatService = chatService;
 
             // 허브 연결 설정 (서버 주소는 환경에 맞게 수정) 
             _connection = new HubConnectionBuilder()
@@ -46,7 +48,7 @@ namespace HAHATalk.Services
         private void RegisterHubEvents()
         {
             // 서버에서 ChatMessageDto 객체 하나를 던질 경우를 대비한 리스너 
-            _connection.On<ChatMessageDto>("ReceiveMessage", (msgDto) =>
+            _connection.On<ChatMessageDto>("ReceiveMessage", async (msgDto) =>
             {
                 // 기존 이벤트 방식 지원 (문자열 두개로 분해해서 전달) 
                 //MessageReceived?.Invoke(msgDto.SenderId, msgDto.Message); (2026.05.13 주석처리) 메세지 중복 
@@ -54,6 +56,11 @@ namespace HAHATalk.Services
 
                 WeakReferenceMessenger.Default.Send(new NewMessageReceivedMessage(msgDto));
 
+                // 어느 탭에 있든 상관없이 UserStore의 전체 읽지 않은 갯수를 즉시 업데이트 
+                var unreadCount = await _chatService.GetTotalUnreadCountAsync(_userStore.CurrentUserEmail);
+                _userStore.TotalUnreadCount = unreadCount;
+
+                System.Diagnostics.Debug.WriteLine($"[SignalR] 새 메시지 수신. 총 안읽음: {unreadCount}");
             });
 
             // 친구 추가 알림 수신 리스터 (서버의 SendAsync("UpdateChatList")를 받는다) 
