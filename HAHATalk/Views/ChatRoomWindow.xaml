@@ -89,7 +89,7 @@
                     <Image Stretch="UniformToFill"
                             HorizontalAlignment="Center" 
                             VerticalAlignment="Center"
-                            Source="{Binding DisplayProfile}"/>
+                            Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
                 </Border>
 
                 <StackPanel Grid.Column="1">
@@ -117,9 +117,8 @@
                     <Image Stretch="UniformToFill"
                             HorizontalAlignment="Center" 
                             VerticalAlignment="Center"
-                            Source="{Binding DisplayProfile}">
-
-                    </Image>
+                            Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
+                    
                 </Border>
 
                 <StackPanel Grid.Column="1">

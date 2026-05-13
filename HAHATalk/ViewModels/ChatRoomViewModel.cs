@@ -69,11 +69,18 @@ namespace HAHATalk.ViewModels
             _userStore = userStore;
             _signalRService = signalRService;
 
-            // 기존의 복잡한 if-else 대신 ChatService의 메서드를 호출.
-            var fullUrl = _chatService.GetServerFullUrl(targetProfile);
-
-            // URL이 비어있거나 변환에 실패했다면 기본 이미지 할당
-            TargetProfile = fullUrl;
+            // [수정] 기본 이미지 처리 및 경로 조립 로직 단순화
+            if (string.IsNullOrEmpty(targetProfile))
+            {
+                TargetProfile = "/Assets/basic_Profile.png";
+            }
+            else
+            {
+                // 이미 주소 형식이면 그대로 쓰고, 아니면 서버 주소 붙임
+                TargetProfile = targetProfile.StartsWith("http")
+                                ? targetProfile
+                                : _chatService.GetServerFullUrl(targetProfile);
+            }
 
             // 컬렉션 동기화 설정 (다른 스레드에서 Add 해도 에러 안나게 ) 
             BindingOperations.EnableCollectionSynchronization(Messages, new object());
@@ -119,8 +126,10 @@ namespace HAHATalk.ViewModels
                         SenderName = (string.IsNullOrEmpty(incoming.SenderName) || incoming.SenderName.Contains("@"))
                                      ? TargetName : incoming.SenderName,
 
-                        // 서비스에서 이미 조립해서 보냈으므로 그대로 할당 (안전빵으로 null 체크만)
-                        SenderProfile = incoming.SenderProfile ?? TargetProfile,
+                       
+
+                        // 호환성을 위해 SenderProfile도 유지한다면 그대로 둠
+                        SenderProfile = incoming.SenderProfile,
 
                         Message = incoming.Message,
                         MessageType = incoming.MessageType, //2026.05.08 텍스트인지 파일인지 
@@ -221,27 +230,37 @@ namespace HAHATalk.ViewModels
                     if (dbMessages != null)
                     {
                         foreach (var msg in dbMessages)
-                        {                            
-                            // 내 이메일과 발신자 이메일을 비교해서 IsMine 세팅 
-                            msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
+                        {
+                            //  내 메세지 여부 판단 
+                            msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
 
-                            // 닉네임 누락 방지: 상대방 메시지인데 이름이 비어있으면 TargetName 주입
-                            if (!msg.IsMine && (string.IsNullOrEmpty(msg.SenderName) || msg.SenderName.Contains("@")))
+                            // 상대방 프로필 및 이름 보정 
+                            if(!msg.IsMine)
                             {
-                                msg.SenderName = this.TargetName;
-                                msg.SenderProfile = this.TargetProfile; // 프로필도 같이 보정
+                                // 이름이 비어있거나 이메일 형식이면 TargetName으로 교체 
+                                if(string.IsNullOrEmpty(msg.SenderName) || msg.SenderName.Contains("@"))
+                                {
+                                    msg.SenderName = this.TargetName;
+                                }
+
+                                // 프로필 경로 보정: DB에서 온 상대 경로를 서버 URL과 합침
+                                string rawProfile = !string.IsNullOrEmpty(msg.SenderProfile) ? msg.SenderProfile : this.TargetProfile;
+
+                             
+                                if (!string.IsNullOrEmpty(rawProfile))
+                                {
+                                    msg.SenderProfile = rawProfile.StartsWith("http")
+                                        ? rawProfile
+                                        : _chatService.GetServerFullUrl(rawProfile);
+                                }
                             }
 
-                            // 텍스트가 아닌 이미지/비디오
-                            if (msg.MessageType != (int)ChatMessageTypes.Text)
+                            // 이미지 / 비디오 메시지 경로 보정(기존 유지)
+                            if (msg.MessageType != (int)ChatMessageTypes.Text && !string.IsNullOrEmpty(msg.FilePath))
                             {
-                                if (!string.IsNullOrEmpty(msg.FilePath))
+                                if (!msg.FilePath.StartsWith("http"))
                                 {
-                                    // 경로가 상대경로라면 풀 경로로 만들어줌
-                                    if (!msg.FilePath.StartsWith("http"))
-                                    {
-                                        msg.FilePath = _chatService.GetServerFullUrl(msg.FilePath);
-                                    }
+                                    msg.FilePath = _chatService.GetServerFullUrl(msg.FilePath);
                                 }
                             }
 
@@ -364,6 +383,18 @@ namespace HAHATalk.ViewModels
             return path;
         }
 
+        // 방 정보를 초기화하는 시점(생성자나 Init 메서드)에서 경로 보정
+        public void InitializeRoom(string profilePath)
+        {
+            if (!string.IsNullOrEmpty(profilePath))
+            {
+                // 상대 경로라면 즉시 풀 경로로 변환하여 저장
+                TargetProfile = profilePath.StartsWith("http")
+                    ? profilePath
+                    : _chatService.GetServerFullUrl(profilePath);
+            }
+        }
+
         private async Task SendFileMessageAsync(string originFileName, string localFilePath)
         {
             // 메세지 타입 설정 
@@ -376,6 +407,9 @@ namespace HAHATalk.ViewModels
                 RoomId = RoomId,
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
+
+                // [수정] 내 프로필 경로 할당
+
                 SenderProfile = _userStore.CurrentUserProfile,  // 내 프로필 추가 
                 Message = "파일을 보내는 중....",
                 MessageType = initialMessageType,

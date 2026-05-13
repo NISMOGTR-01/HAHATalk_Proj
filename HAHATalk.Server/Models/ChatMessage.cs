@@ -35,5 +35,12 @@ namespace HAHATalk.Server.Models
 
         [StringLength(50)]
         public string? MessageGuid { get; set; }
+
+        // 유저 테이블과 조인해서 이 값을 채워줘야 합니다.
+        [NotMapped]
+        public string? SenderProfile { get; set; }
+
+        [NotMapped]
+        public string? SenderName { get; set; }
     }
 }
