@@ -32,5 +32,14 @@ namespace HAHATalk.Stores
         // 아직 읽지 않은 채팅 수 총합 
         [ObservableProperty]
         private int _totalUnreadCount;
+
+        // 2026.05.13 로그아웃 추가 
+        public void ClearSession()
+        {
+            CurrentUserId = null;
+            CurrentUserNickname = null;
+            CurrentUserProfile = null;
+            TotalUnreadCount = 0;
+        }
     }
 }

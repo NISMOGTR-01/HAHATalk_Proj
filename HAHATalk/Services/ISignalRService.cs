@@ -32,5 +32,7 @@ namespace HAHATalk.Services
 
 
         Task SendDtoMessageAsync(ChatMessageDto dto, string targetEmail);
+  
+        
     }
 }

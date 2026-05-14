@@ -23,6 +23,8 @@ namespace HAHATalk.ViewModels
         private readonly IServiceProvider _serviceProvider; 
         // 2026.05.11 
         private readonly IChatService _chatService; // 추가 주입 (전역 안 읽은 메세지 관리용) 
+        // 2026.05.13 
+        private readonly ISignalRService _signalRService;
 
         [ObservableProperty]
         private INotifyPropertyChanged _currentViewModel = default!;
@@ -42,12 +44,14 @@ namespace HAHATalk.ViewModels
         public MainViewModel(MainNavigationStore mainNavigationStore, 
             UserStore userStore,
             IServiceProvider serviceProvider, 
-            IChatService chatService)
+            IChatService chatService,
+            ISignalRService signalRService)
         {
             _navigationStore = mainNavigationStore;
             _userStore = userStore; // XAML에서 UserStore.TotalUnreadCount에 접근 가능 
             _serviceProvider = serviceProvider;
             _chatService = chatService;
+            _signalRService = signalRService;
 
             // Store 이벤트 구독 
             _navigationStore.CurrentViewModelChanged += CurrentViewModelChanged;
@@ -175,14 +179,18 @@ namespace HAHATalk.ViewModels
 
         // 2026.04.05 추가 
         [RelayCommand]
-        public void Logout()
+        public async Task Logout()
         {
-            // 2026.05.12 로그아웃 시 전역 데이터 초기화
+            /// 1. SignalR 연결 해제
+            await _signalRService.DisconnectAsync();
+
+            // 2. 유저 데이터 세션 초기화
             _userStore.TotalUnreadCount = 0;
             _userStore.CurrentUserEmail = string.Empty;
+            _userStore.CurrentUserId = string.Empty; // 추가 데이터들도 초기화
 
+            // 3. 로그인 화면으로 이동 (NavigationStore 활용)
             _navigationStore.SlideType = SlideType.LeftToRight;
-
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>();
         }
 
@@ -199,6 +207,6 @@ namespace HAHATalk.ViewModels
             
         }
 
-
+        
     }
 }

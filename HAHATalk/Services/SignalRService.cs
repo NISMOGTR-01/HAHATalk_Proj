@@ -16,7 +16,7 @@ namespace HAHATalk.Services
     // 서버와 연결을 맺고 , 메시지를 실시간으로 주고 받는 싱글톤 서비스 
     public class SignalRService : ISignalRService
     {
-        private readonly HubConnection _connection;
+        private HubConnection? _connection;
         private readonly UserStore _userStore;
         private readonly ApiSettings _apiSettings; // 설정 클래스 추가 
         private readonly IChatService _chatService;
@@ -98,11 +98,23 @@ namespace HAHATalk.Services
         {
             try
             {
-                // 연결이 끊겨 있을 때만 StartAsync 호출 
+                // 1. 만약 로그아웃해서 _connection이 null이라면 다시 생성
+                if (_connection == null)
+                {
+                    _connection = new HubConnectionBuilder()
+                        .WithUrl(_apiSettings.ChatHubUrl)
+                        .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5) })
+                        .Build();
+
+                    // 🔥 중요: 새로 생성했으니 리스너(On 이벤트들)도 다시 등록해줘야 함!
+                    RegisterHubEvents();
+                }
+
+                // 2. 연결이 끊겨 있을 때만 StartAsync 호출 
                 if (_connection.State == HubConnectionState.Disconnected)
                 {
                     await _connection.StartAsync();
-                    System.Diagnostics.Debug.WriteLine("Signal R Connected!");
+                    System.Diagnostics.Debug.WriteLine("SignalR Connected!");
                 }
             }
             catch (Exception ex)
@@ -117,9 +129,26 @@ namespace HAHATalk.Services
         // 연결 종료 
         public async Task DisconnectAsync()
         {
-            if (_connection.State != HubConnectionState.Disconnected)
+            if (_connection != null)
             {
-                await _connection.StopAsync();
+                try
+                {
+                    // 연결 상태가 Connected일 때만 정중하게 Stop 요청
+                    if (_connection.State != HubConnectionState.Disconnected)
+                    {
+                        await _connection.StopAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Disconnect Error: {ex.Message}");
+                }
+                finally
+                {
+                    // 연결 객체 해제 및 null 처리 (재로그인 시 새로 생성하기 위함)
+                    await _connection.DisposeAsync();
+                    _connection = null;
+                }
             }
         }
 
@@ -213,6 +242,16 @@ namespace HAHATalk.Services
             catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"SignalR DTO 전송 에러: {ex.Message}");
+            }
+        }
+
+        public async Task StopConnectionAsync()
+        {
+            if(_connection != null)
+            {
+                await _connection.StopAsync();
+                await _connection.DisposeAsync();
+                _connection = null; // 연결 객체 자체를 날려버림
             }
         }
     }
