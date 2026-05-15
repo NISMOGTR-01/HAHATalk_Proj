@@ -252,8 +252,6 @@ namespace HAHATalk.ViewModels
             None,
             AlreadyExists,
             FormatError
-        }
-
-      
+        }      
     }
 }

@@ -254,6 +254,25 @@ namespace HAHATalk.Services
                 _connection = null; // 연결 객체 자체를 날려버림
             }
         }
+
+        public async Task LeaveRoom(string roomId)
+        {
+            if (_connection == null || _connection.State != HubConnectionState.Connected)
+            {
+                return;
+            }
+
+            try
+            {
+                // 서버의 ChatHub에 있는 LeaveRoom(roomId) 메서드를 호출합니다.
+                await _connection.InvokeAsync("LeaveRoom", roomId);
+                System.Diagnostics.Debug.WriteLine($"[SignalR] {roomId} 방에서 성공적으로 나갔습니다.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SignalR] LeaveRoom 에러: {ex.Message}");
+            }
+        }
     }
 
 

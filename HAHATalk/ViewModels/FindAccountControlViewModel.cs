@@ -36,7 +36,7 @@ namespace HAHATalk.ViewModels
             }
 
             // 전화번호로 가입한 계정이 있는지 확인 
-            Find_Account_Async();
+            await Find_Account_Async();
             
         }       
 

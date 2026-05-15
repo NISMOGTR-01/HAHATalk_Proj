@@ -78,6 +78,14 @@ namespace HAHATalk.ViewModels
                     await LoadChatListAsync();
                 });
             });
+
+            // 메세지 등록 2026.05.15
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                _chatList.Clear();
+                System.Diagnostics.Debug.WriteLine("로그아웃 메세지 수신: 리스트 초기화 완료!");
+            });
+
             _ = LoadChatListAsync();
         }
 

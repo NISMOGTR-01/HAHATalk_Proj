@@ -3,12 +3,8 @@ using CommonLib.Enums;
 using CommonLib.Models;
 using HAHATalk.Server.Repository;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using Org.BouncyCastle.Asn1.Mozilla;
 using Serilog;
 using System.Collections.Concurrent;
-using System.Collections.Specialized;
 
 
 namespace HAHATalk.Server.Hubs
@@ -23,7 +19,7 @@ namespace HAHATalk.Server.Hubs
         // 클라이언트에서 'SendMessage'라고 호출하면 이 메서드가 실행 
 
         // 생성자 주입으로 DB 컨텍스트 가져오기 
-        
+
         public ChatHub(IChatRepository repository)
         {
             _chatRepository = repository;
@@ -43,7 +39,7 @@ namespace HAHATalk.Server.Hubs
                     SenderId = dto.SenderId,
                     Message = dto.Message,
                     MessageType = dto.MessageType,
-                    FilePath = dto.FilePath, 
+                    FilePath = dto.FilePath,
                     FileName = dto.FileName,
                     SendTime = dto.SendTime,
                     MessageGuid = dto.MessageGuid,
@@ -71,7 +67,7 @@ namespace HAHATalk.Server.Hubs
 
 
         // 클라이언트 에서 'SendMessage'를 호출할 때 
-        public async Task SendMessage(string roomId, string senderId, string targetId, 
+        public async Task SendMessage(string roomId, string senderId, string targetId,
             string message)
         {
             Log.Information("[SignalR] 메시지 수신: {SenderId} -> {TargetId} (Room: {RoomId})", senderId, targetId, roomId);
@@ -101,7 +97,7 @@ namespace HAHATalk.Server.Hubs
                     RoomId = roomId,
                     SenderId = senderId,
                     Message = message,
-                    SendTime = sendTime,                 
+                    SendTime = sendTime,
                     SenderName = senderId,
                     MessageGuid = messageGuid,
                 };
@@ -123,7 +119,7 @@ namespace HAHATalk.Server.Hubs
                 // 상대방이 UpdateChatList 신호를 받으면 목록을 새로고침
                 await Clients.User(targetId).SendAsync("UpdateChatList");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log.Error(ex, "[ChatHub] 메시지 처리 중 오류 발생 (Room: {RoomId})", roomId);
             }
@@ -145,7 +141,7 @@ namespace HAHATalk.Server.Hubs
                     _ => "메세지가 도착했습니다."
                 };
 
-   
+
                 // 파일 메세지 DB 저장 
                 var chatMsg = new ChatMessage
                 {
@@ -178,16 +174,16 @@ namespace HAHATalk.Server.Hubs
                 };
 
                 await _chatRepository.MSSQL_UpdateChatListAsync(msgDto, targetId, targetId, senderId, senderId);
-             
+
                 // 실시간 전송 
                 await Clients.Group(roomId).SendAsync("ReceiveMessage", msgDto);
                 await Clients.User(targetId).SendAsync("UpdateChatList");
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log.Error(ex, "[ChatHub] 파일 메세지 처리 중 오류 발생");
-            }            
+            }
         }
 
         // 채팅방 입장 (채팅창 열 때 호출) 
@@ -250,6 +246,7 @@ namespace HAHATalk.Server.Hubs
         public async Task LeaveRoom(string roomId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+
             Log.Information("[SignalR] 유저({ConnectionId})가 방({RoomId})에 퇴장", Context.ConnectionId, roomId);
 
         }
@@ -266,10 +263,12 @@ namespace HAHATalk.Server.Hubs
 
                 Log.Information($"[읽음신호] {readerId}가 읽음 -> 방 전체에 알림");
             }
-            catch (Exception ex) { Log.Error(ex, "에러"); }
-
-
-            
+            catch (Exception ex)
+            {
+                Log.Error(ex, "에러");
+            }
         }
+
+      
     }
 }

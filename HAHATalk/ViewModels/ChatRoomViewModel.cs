@@ -7,10 +7,12 @@ using HAHATalk.Messages;
 using HAHATalk.Services;
 using HAHATalk.Stores;
 using Microsoft.Win32;
+using Microsoft.Xaml.Behaviors.Layout;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Packaging;
 using System.Windows.Data;
+using System;
 
 namespace HAHATalk.ViewModels
 {
@@ -51,6 +53,9 @@ namespace HAHATalk.ViewModels
 
         public string ParticipantIcon => ParticipantCount > 2 ? "GroupIconPath" : "SingleUserIconPath";
 
+        // CloseAction 속성 추가 
+        public System.Action? CloseAction { get; set; }
+        
         // 생성자 : 누구와의 채팅방인지 정보를 받음 
         public ChatRoomViewModel(
             string roomId,
@@ -190,9 +195,7 @@ namespace HAHATalk.ViewModels
                         {
                             System.Diagnostics.Debug.WriteLine($"실시간 읽음 처리 실패: {ex.Message}");
                         }
-                    }
-
-                    
+                    }                    
                 }, System.Windows.Threading.DispatcherPriority.Render // 즉시 그리도록 우선순위 조정 
                 );
             });
@@ -217,6 +220,34 @@ namespace HAHATalk.ViewModels
                 {
                     System.Diagnostics.Debug.WriteLine($"[방번호불일치] 수신:{m.RoomId} != 내방:{this.RoomId}");
                 }
+            });
+
+            // 로그아웃 구독 추가 
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"로그아웃 감지 : {RoomId} 채팅방 종료 및 정리시작");
+
+                    // Signal R 방 나가기 (서버에 나갔음 알리기) 
+                    try
+                    {
+                        await _signalRService.LeaveRoom(RoomId);
+                    }
+                    catch
+                    {
+
+                    }
+
+                    // 메모리 데이터 즉시 삭제 
+                    Messages.Clear();
+
+                    // 메신저 등록 해제 (메모리 누수 방지) 
+                    WeakReferenceMessenger.Default.UnregisterAll(this);
+
+                    // 창단기 
+                    CloseAction?.Invoke();
+                });
             });
         }
 

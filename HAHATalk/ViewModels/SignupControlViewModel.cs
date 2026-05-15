@@ -59,6 +59,7 @@ namespace HAHATalk.ViewModels
         {
             this._navigationService = navigationService;
             this._accountService = accountService;
+
         }
 
 

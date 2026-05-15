@@ -163,23 +163,23 @@ namespace HAHATalk.Server.Repository
                 DECLARE @CurrentCount INT = (SELECT COUNT(*) FROM ChatMessage 
                                              WHERE RoomId = @roomId AND SenderId = @myId AND IsRead = 0);
 
-                -- 1. 내 목록 처리
+             -- 1. 내 목록 처리
                 IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @myId)
-                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
-                    VALUES (@roomId, @myId, @targetId, @RealTargetName, @msgText, @lastTime, 0, 0, @messageType);
+                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop) -- MessageType 제거
+                    VALUES (@roomId, @myId, @targetId, @RealTargetName, @msgText, @lastTime, 0, 0); -- @messageType 제거
                 ELSE
                     UPDATE ChatList 
-                    SET LastMessage = @msgText, LastTime = @lastTime, TargetName = @RealTargetName, MessageType = @messageType
+                    SET LastMessage = @msgText, LastTime = @lastTime, TargetName = @RealTargetName -- MessageType 제거
                     WHERE RoomId = @roomId AND OwnerId = @myId;
-                
+
                 -- 2. 상대방 목록 처리
                 IF NOT EXISTS (SELECT 1 FROM ChatList WHERE RoomId = @roomId AND OwnerId = @targetId)
-                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop, MessageType)
-                    VALUES (@roomId, @targetId, @myId, @RealMyNickname, @msgText, @lastTime, @CurrentCount, 0, @messageType);
+                    INSERT INTO ChatList (RoomId, OwnerId, TargetId, TargetName, LastMessage, LastTime, UnreadCount, IsTop) -- MessageType 제거
+                    VALUES (@roomId, @targetId, @myId, @RealMyNickname, @msgText, @lastTime, @CurrentCount, 0); -- @messageType 제거
                 ELSE
                     UPDATE ChatList 
-                    SET LastMessage = @msgText, LastTime = @lastTime, UnreadCount = @CurrentCount, TargetName = @RealMyNickname, MessageType = @messageType
-                    WHERE RoomId = @roomId AND OwnerId = @targetId;";
+                    SET LastMessage = @msgText, LastTime = @lastTime, UnreadCount = @CurrentCount, TargetName = @RealMyNickname -- MessageType 제거
+                WHERE RoomId = @roomId AND OwnerId = @targetId;";
 
             // CreateConnection() 결과물을 DbConnection으로 캐스팅하여 비동기 메서드 활성화
             using var db = CreateConnection() as System.Data.Common.DbConnection;

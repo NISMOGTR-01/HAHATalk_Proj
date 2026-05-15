@@ -25,6 +25,9 @@ namespace HAHATalk.Services
 
         Task JoinRoom(string roomId);
 
+        // 추가 : 방 나가기 기능 (2025.05.15)
+        Task LeaveRoom(string roomId);
+
         Task SendReadReceiptAsync(string roomId, string targetId);
 
         // 2026.05.07 이미지 / 파일 전송을 위한 메서드추가 

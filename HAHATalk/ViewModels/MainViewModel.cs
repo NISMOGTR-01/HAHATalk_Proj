@@ -125,6 +125,8 @@ namespace HAHATalk.ViewModels
         // 초기 시작용 
         private void NavigateToLogin()
         {
+            //
+
             _navigationStore.SlideType = SlideType.RightToLeft;
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>(); 
         }
@@ -184,11 +186,12 @@ namespace HAHATalk.ViewModels
             /// 1. SignalR 연결 해제
             await _signalRService.DisconnectAsync();
 
-            // 2. 유저 데이터 세션 초기화
-            _userStore.TotalUnreadCount = 0;
-            _userStore.CurrentUserEmail = string.Empty;
-            _userStore.CurrentUserId = string.Empty; // 추가 데이터들도 초기화
+            // 2. UserStore 공통 데이터 초기화 
+            _userStore.ClearSession();
 
+            // 각 ViewModel에게 초기화 신호 보내기 
+            WeakReferenceMessenger.Default.Send(new LogoutMessage()); 
+            
             // 3. 로그인 화면으로 이동 (NavigationStore 활용)
             _navigationStore.SlideType = SlideType.LeftToRight;
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>();

@@ -38,6 +38,17 @@ namespace HAHATalk.ViewModels
         {
             this._friendService = friendService;
             this._userStore = userStore;
+
+            // 2026.05.15 로그아웃 메세지 등록 
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                // UI 스레드에서 안전하게 창 닫기 실행 
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    System.Diagnostics.Debug.Write("로그아웃 감지 : 친구 추가 창을 닫습니다.");
+                    CloseAction?.Invoke();
+                });
+            });
         }
 
         [RelayCommand]

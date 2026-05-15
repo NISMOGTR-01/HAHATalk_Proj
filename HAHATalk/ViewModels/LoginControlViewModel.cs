@@ -1,11 +1,12 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommonLib.Dtos;
+using CommonLib.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 using HAHATalk.Services;
 using HAHATalk.Stores;
-using CommonLib.Models;
 using System.Collections.ObjectModel;
-using CommonLib.Dtos;
 
 namespace HAHATalk.ViewModels
 {
@@ -72,6 +73,9 @@ namespace HAHATalk.ViewModels
         //private void Login(object obj)
         private async Task Login(object obj)        // 2026.03.17 버튼 애니메이션 효과를 위해 비동기 형식으로 변경 
         {
+            if (IsLoggingIn)
+                return;
+
             // 넘어온 프로젝트가 PasswordBoxControl인지 확인하고 패스워드 추출 
             if(obj is WPFLib.Controls.PasswordBoxControl pwControl)
             {
@@ -133,6 +137,8 @@ namespace HAHATalk.ViewModels
 
 
                     await _signalRService.ConnectAsync();
+
+                    WeakReferenceMessenger.Default.Send(new LoginSuccessMessage());
 
                     await Task.Delay(500);
                     _navigationService.Navigate(NaviType.FriendList);

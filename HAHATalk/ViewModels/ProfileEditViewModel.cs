@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 using HAHATalk.Services;
 using HAHATalk.Stores;
 using Microsoft.Win32;
@@ -44,6 +46,21 @@ namespace HAHATalk.ViewModels
             EditName = currentName;
             EditStatus = currentStatus;
             DisplayProfileImg = currentImg;
+
+            // 로그아웃 메시지 수신 시 창 닫기
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                // UI 스레드에서 창 닫기 신호 (CloseAction 등을 활용)
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    // 이 뷰모델이 가진 CloseCommand나 특정 Action을 실행하여 창을 닫기.
+                    // 만약 View에서 이 ViewModel의 CloseAction을 구독하고 있다면:
+                    // CloseAction?.Invoke(); 
+
+                    // 또는 간단하게 알림 후 닫기 유도
+                    System.Diagnostics.Debug.WriteLine("로그아웃 감지: 프로필 상세창을 닫습니다.");
+                });
+            });
         }
 
         //카메라 아이콘 클릭 - 이미지 선택 

@@ -79,6 +79,31 @@ namespace HAHATalk.ViewModels
                 App.Current.Dispatcher.Invoke(async () => await RefreshMyInfo());
             });
 
+            // 메세지 등록 
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                // 친구목록 비우기 
+                Friends.Clear();
+                // 내프로필 정보 초기화 
+                MyProfile = new Friend();
+                FriendsCountText = "로그인이 필요합니다.";
+
+                System.Diagnostics.Debug.WriteLine("로그아웃 메세지 수신: 리스트 초기화 완료!");
+            });
+
+            WeakReferenceMessenger.Default.Register<LoginSuccessMessage>(this, (r, m) =>
+            {
+                // UI 스레드에서 친구 목록 다시 불러오기
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    // 1. 내 프로필(상단 영역) 다시 초기화
+                    InitializeMyProfile();
+
+                    // 2. 친구 리스트 다시 불러오기
+                    await LoadFriends();
+                });
+            });
+
             _ = InitializeAsync();
         }
         

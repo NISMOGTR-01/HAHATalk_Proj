@@ -40,6 +40,8 @@ namespace HAHATalk.Stores
             CurrentUserNickname = null;
             CurrentUserProfile = null;
             TotalUnreadCount = 0;
+
+            // 
         }
     }
 }

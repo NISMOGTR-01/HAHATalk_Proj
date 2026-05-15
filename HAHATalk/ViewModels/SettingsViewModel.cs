@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using HAHATalk.Messages;
 using HAHATalk.Stores;
 using Microsoft.Identity.Client;
 using System;
@@ -38,6 +40,20 @@ namespace HAHATalk.ViewModels
                 //FriendCount = _userStore.
 
             }
+
+            // 프로필 변경 메시지 구독 (설정창 띄워놓고 프로필 바꿨을 때 대비)
+            WeakReferenceMessenger.Default.Register<MyProfileChangedMessage>(this, (r, m) =>
+            {
+                UserName = _userStore.CurrentUserNickname;
+            });
+
+            WeakReferenceMessenger.Default.Register<LogoutMessage>(this, (r, m) =>
+            {
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    CloseAction?.Invoke(); // WindowManager가 등록해준 닫기 액션 실행
+                });
+            });
         }
 
         [RelayCommand]
