@@ -49,6 +49,10 @@ namespace HAHATalk.Services
                 case NaviType.ChatList:
                     MainNavigate(SlideType.BottomToTop, typeof(ChatListControlViewModel));
                     break;
+                // 2026.05.15 LockScreen 타입 추가 
+                case NaviType.LockScreen:
+                    MainNavigate(SlideType.TopToBottom, typeof(LockScreenViewModel));
+                    break;
             }
         }
     }

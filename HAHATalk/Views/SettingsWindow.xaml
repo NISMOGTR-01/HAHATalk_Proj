@@ -6,8 +6,10 @@
              xmlns:local="clr-namespace:HAHATalk.Views"
              mc:Ignorable="d" 
              Title="설정"
-             d:DesignHeight="600" 
-             d:DesignWidth="500"
+             d:DesignHeight="390" 
+             d:DesignWidth="580"
+             Width="580" 
+             Height="580"
              WindowStartupLocation="CenterOwner"
              Background="White">
     <Grid>
@@ -42,16 +44,16 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Ellipse Width="60" Height="60" 
-                             Fill="#D0D0D0"/>
+                    <Ellipse Width="60" Height="60" Stroke="#EEEEEE" StrokeThickness="1">
+                        <Ellipse.Fill>
+                            <ImageBrush ImageSource="{Binding ProfileImage}" Stretch="UniformToFill"/>
+                        </Ellipse.Fill>
+                    </Ellipse>
 
-                    <StackPanel Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Margin="15 0 0 0">
-                        <TextBlock Text="{Binding UserName}"
-                                   FontSize="14" FontWeight="Bold"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15 0 0 0">
+                        <TextBlock Text="{Binding UserName}" FontSize="14" FontWeight="Bold"/>
                         <TextBlock Text="{Binding FriendCount, StringFormat='친구 {0}명'}"
-                                   Foreground="Gray" FontSize="12"/>
+                                    Foreground="Gray" FontSize="12" Margin="0 3 0 0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal"

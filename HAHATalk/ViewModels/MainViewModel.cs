@@ -4,12 +4,15 @@ using CommunityToolkit.Mvvm.Messaging;
 using HAHATalk.Messages;
 using HAHATalk.Services;
 using HAHATalk.Stores;
+using HAHATalk.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Client;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Text;
+using System.Windows.Navigation;
 using WPFLib.Controls;
 
 namespace HAHATalk.ViewModels
@@ -25,6 +28,7 @@ namespace HAHATalk.ViewModels
         private readonly IChatService _chatService; // 추가 주입 (전역 안 읽은 메세지 관리용) 
         // 2026.05.13 
         private readonly ISignalRService _signalRService;
+        private readonly INavigationService _navigationService;
 
         [ObservableProperty]
         private INotifyPropertyChanged _currentViewModel = default!;
@@ -45,13 +49,15 @@ namespace HAHATalk.ViewModels
             UserStore userStore,
             IServiceProvider serviceProvider, 
             IChatService chatService,
-            ISignalRService signalRService)
+            ISignalRService signalRService,
+            INavigationService navigationService)
         {
             _navigationStore = mainNavigationStore;
             _userStore = userStore; // XAML에서 UserStore.TotalUnreadCount에 접근 가능 
             _serviceProvider = serviceProvider;
             _chatService = chatService;
             _signalRService = signalRService;
+            _navigationService = navigationService;
 
             // Store 이벤트 구독 
             _navigationStore.CurrentViewModelChanged += CurrentViewModelChanged;
@@ -103,7 +109,8 @@ namespace HAHATalk.ViewModels
             if(viewModel is LoginControlViewModel ||
                 viewModel is SignupControlViewModel || 
                 viewModel is FindAccountControlViewModel || 
-                viewModel is ChangePwdControlViewModel)
+                viewModel is ChangePwdControlViewModel || 
+                viewModel is LockScreenViewModel)
             {
                 IsSideBarVisible = false;
             }
@@ -207,7 +214,26 @@ namespace HAHATalk.ViewModels
         [RelayCommand]
         public void OpenSettings()
         {
-            
+            // 1. DI 컨테이너에서 뷰모델 가져오기
+            var vm = _serviceProvider.GetRequiredService<SettingsViewModel>();
+
+            // 2. 윈도우 생성
+            var settingsWin = new SettingsWindow();
+            settingsWin.DataContext = vm;
+            settingsWin.Owner = System.Windows.Application.Current.MainWindow;
+
+            // 3. CloseAction 연결 
+            vm.CloseAction = () => settingsWin.Close();
+
+            // 4. 창 띄우기
+            settingsWin.Show();
+        }
+
+        // 2026.05.15 잠금모드 이동 커맨드 추가 
+        [RelayCommand]
+        public void NavigateToLockScreen()
+        {
+            _navigationService.Navigate(NaviType.LockScreen);
         }
 
         

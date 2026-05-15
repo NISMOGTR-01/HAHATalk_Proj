@@ -105,9 +105,14 @@ namespace HAHATalk
             services.AddTransient<ChangePwdControlViewModel>();
             services.AddTransient<FindAccountControlViewModel>();
             services.AddTransient<MainNaviControlViewModel>();
+            services.AddTransient<LockScreenViewModel>();
+            services.AddTransient<SettingsViewModel>();
+
 
             services.AddSingleton<FriendListControlViewModel>();
             services.AddSingleton<ChatListControlViewModel>();
+
+
 
             // Views 
             services.AddSingleton(s => new MainView()

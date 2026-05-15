@@ -44,6 +44,10 @@
         <DataTemplate DataType="{x:Type vm:ChatListControlViewModel}">
             <controls:ChatListControl/>
         </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:LockScreenViewModel}">
+            <controls:LockScreenControl/>
+        </DataTemplate>
     </Window.Resources>
     
     <WindowChrome.WindowChrome>
@@ -235,7 +239,7 @@
                                         <fa6:SvgAwesome Icon="Solid_Gear" Width="14" PrimaryColor="Black"/>
                                     </MenuItem.Icon>                                    
                                 </MenuItem>
-                                <MenuItem Header="잠금모드" Command="{Binding LockModeCommand}">
+                                <MenuItem Header="잠금모드" Command="{Binding NavigateToLockScreenCommand}">
                                     <MenuItem.Icon>
                                         <fa6:SvgAwesome Icon="Solid_Lock" 
                                                         Width="14" PrimaryColor="Black"/>
