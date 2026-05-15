@@ -63,17 +63,18 @@ namespace HAHATalk.ViewModels
         [RelayCommand]
         private void Unlock(string password)
         {
-            // 🚀 임시 로직: 일단 암호 '1234'로 설정 (나중에 DB나 설정값과 비교하세요!)
-            if (password == "1234")
+            string savedPassword = _userStore.LockPassword ?? "0000";
+
+            if (password == savedPassword)
             {
                 // 성공 시 이전 화면으로 돌아가거나 메인으로 이동
-                // _navigationService.GoBack(); // 내비게이션 서비스에 GoBack이 있다면 사용
                 _navigationService.Navigate(NaviType.FriendList);
 
                 OnUnlockSuccess?.Invoke();
             }
             else
             {
+                //
                 MessageBox.Show("비밀번호가 일치하지 않습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }

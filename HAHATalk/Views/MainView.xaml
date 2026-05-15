@@ -12,6 +12,7 @@
         WindowStyle="None"
         Title="MainView" Height="550" Width="350">
     <Window.Resources>
+    
         <!-- BoolToVis-->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
@@ -63,72 +64,7 @@
         <!-- Title Bar -->
         <controls:TitleBar Grid.Row="0" />
         
-        <!-- 2026.03.18 구조 변경 -->
-        <!--
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
 
-            <ctrl:ControlSlider Grid.Column="0"
-                                Grid.ColumnSpan="2"
-                                Panel.ZIndex="0"
-                                ViewModel="{Binding CurrentViewModel}"
-                                SlideType="{Binding SlideType}"
-                                Duration="0:0:0.3"/>
-
-            <Border Grid.Column="0"
-                    Width="65"
-                    Panel.ZIndex="1"
-                    Background="#EBEBEB"
-                    BorderBrush="#DCDCDC"
-                    BorderThickness="0 0 2 0"
-                    Visibility="{Binding IsSideBarVisible, Converter={StaticResource BoolToVis}}" Cursor="">
-
-                <StackPanel Margin="0 20 0 0">
-                    <Button Command="{Binding NavigateToFriendListCommand}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Margin="0 15">
-
-                        <fa6:SvgAwesome Icon="Solid_User" Width="22">
-                            <fa6:SvgAwesome.Style>
-                                <Style TargetType="fa6:SvgAwesome">
-                                    <Setter Property="PrimaryColor" Value="#888888"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentViewModel.ControlName}" Value="FriendList">
-                                            <Setter Property="PrimaryColor" Value="Black"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </fa6:SvgAwesome.Style>
-                        </fa6:SvgAwesome>
-                    </Button>
-
-                    <Button Command="{Binding NavigateToChatListCommand}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Margin="0 15"
-                            Cursor="Hand">
-                        <fa6:SvgAwesome Icon="Solid_Comment" Width="22">
-                            <fa6:SvgAwesome.Style>
-                                <Style TargetType="fa6:SvgAwesome">
-                                    <Setter Property="PrimaryColor" Value="#888888"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentViewModel.ControlName}" Value="ChatList">
-                                            <Setter Property="PrimaryColor" Value="Black"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </fa6:SvgAwesome.Style>
-                        </fa6:SvgAwesome>
-                    </Button>
-                </StackPanel>
-                
-            </Border>
-
-         -->
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -225,41 +161,13 @@
                     </StackPanel>
 
                     <!-- 2026.04.05 설정 (톱니바퀴 아이콘 기능 추가)-->
-                    <Button Grid.Row="1"                             
+                    <Button Grid.Row="1"                              
                             Background="White"
                             BorderThickness="0"
                             Margin="0 0 0 20"
                             Cursor="Hand"
-                            Click="BtnSetting_Click">
-                        <Button.ContextMenu>
-                            <ContextMenu x:Name="SettingMesu" Placement="Right">
-                                <MenuItem Header="설정"
-                                          Command="{Binding OpenSettingsCommand}">
-                                    <MenuItem.Icon>
-                                        <fa6:SvgAwesome Icon="Solid_Gear" Width="14" PrimaryColor="Black"/>
-                                    </MenuItem.Icon>                                    
-                                </MenuItem>
-                                <MenuItem Header="잠금모드" Command="{Binding NavigateToLockScreenCommand}">
-                                    <MenuItem.Icon>
-                                        <fa6:SvgAwesome Icon="Solid_Lock" 
-                                                        Width="14" PrimaryColor="Black"/>
-                                    </MenuItem.Icon>                                    
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Header="로그아웃" Command="{Binding LogoutCommand}">
-                                    <MenuItem.Icon>
-                                        <fa6:SvgAwesome Icon="Solid_RightFromBracket" 
-                                                        Width="14" PrimaryColor="Black"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="종료" Command="{Binding ExitCommand}">
-                                    <MenuItem.Icon>
-                                        <fa6:SvgAwesome Icon="Solid_PowerOff"
-                                                        Width="14" PrimaryColor="Black"/>
-                                    </MenuItem.Icon>                                    
-                                </MenuItem>
-                            </ContextMenu>
-                        </Button.ContextMenu>
+                            Click="BtnSetting_Click"
+                            ContextMenu="{StaticResource SettingContextMenu}">
                         <fa6:SvgAwesome Icon="Solid_Gear" Width="22" PrimaryColor="#888888"/>
                     </Button>
                 </Grid>

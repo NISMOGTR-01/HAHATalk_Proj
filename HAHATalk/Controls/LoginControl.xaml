@@ -9,7 +9,13 @@
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
              d:DesignHeight="550" d:DesignWidth="350"
-             Background="{StaticResource ColorPrimary}">   
+             Background="{StaticResource ColorPrimary}">
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="Enter" 
+                Command="{Binding LoginCommand}" 
+                CommandParameter="{Binding ElementName=PwBox}"/>
+    </UserControl.InputBindings>
     <Grid 
           Margin="20 40 20 20">
         <Grid.RowDefinitions>

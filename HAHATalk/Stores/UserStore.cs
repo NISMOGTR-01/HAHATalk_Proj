@@ -33,6 +33,8 @@ namespace HAHATalk.Stores
         [ObservableProperty]
         private int _totalUnreadCount;
 
+
+        public string LockPassword { get; set; } = "0000"; // 기본값 설정 ㅋ
         // 2026.05.13 로그아웃 추가 
         public void ClearSession()
         {
