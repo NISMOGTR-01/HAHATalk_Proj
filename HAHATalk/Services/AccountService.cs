@@ -139,5 +139,29 @@ namespace HAHATalk.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// 2026.05.16 Add
+        /// 잠금모드 암호 업데이트 요청 서버 통신 구현
+        /// </summary>
+        public async Task<bool> UpdateLockPasswordAsync(string email, string lockPassword)
+        {
+            try
+            {
+                // 익명 객체 형태로 깔끔하게 포장해서 전송하거나 필요시 전용 DTO를 사용해도 좋습니다.
+                var requestDto = new { Email = email, LockPassword = lockPassword };
+
+                // POST /api/Account/update-lock-password 호출
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/update-lock-password", requestDto);
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"잠금 암호 설정 통신 실패: {ex.Message}");
+                return false;
+            }
+        }
+         
     }
 }

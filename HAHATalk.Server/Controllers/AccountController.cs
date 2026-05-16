@@ -240,5 +240,53 @@ namespace HAHATalk.Server.Controllers
                 return StatusCode(500, "서버 업로드 오류");
             }
         }
+
+        /// <summary>
+        /// 2026.05.16 잠금모드 암호설정/변경 API 추가 (POST api/Account/update-lock-password)
+        /// </summary>
+        [HttpPost("update-lock-password")]
+        public async Task<IActionResult> UpdateLockPassword([FromBody] UpdateLockPasswordRequestDto dto)
+        {
+            if(!ModelState.IsValid)
+            {
+                return BadRequest("데이터 형식이 올바르지 않습니다.");
+            }
+
+            try
+            {
+                // User가 실제로 존재하는지 검사 
+                bool isExist = await _accountRepository.MSSQL_ExistEmailAsync(dto.Email);
+                if (!isExist)
+                {
+                    Log.Warning("[UpdateLockPassword] 존재하지 않는 계정 접근 시도 (Email: {Email})", dto.Email);
+                    return BadRequest("존재하지 않는 사용자 계정입니다.");
+                }
+
+                // [실행] Repository의 Dapper 로직을 통해 DB 업데이트 수행
+                bool isSuccess = await _accountRepository.MSSQL_UpdateLockPasswordAsync(dto.Email, dto.LockPassword);
+
+                if (isSuccess)
+                {
+                    // 기존 로그인 컨벤션처럼 직관적이고 이쁜 콘솔 로그 출력
+                    Log.Information("\n" +
+                        "==========================================================\n" +
+                        " [LOCK PASSWORD UPDATED] 잠금모드 암호 설정 완료\n" +
+                        " 📧 Email    : {Email}\n" +
+                        " ⏰ Time     : {Time}\n" +
+                        "==========================================================",
+                        dto.Email, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+
+                    return Ok(true);
+                }
+
+                return BadRequest("잠금 암호 변경 처리에 실패했습니다.");
+
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[UpdateLockPassword] 잠금 암호 설정 중 예외 발생(Email: { Email})", dto.Email);
+                return StatusCode(500, "서버 내부 오류가 발생했습니다.");
+            }
+        }
     }
 }

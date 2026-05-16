@@ -28,5 +28,11 @@ namespace HAHATalk.Services
         // 프로필 정보 (이미지 파일 경로 및 상태 메세지) 업데이트 
         // 이미지 경로는 로컬 파일 경로를 받아 서비스 내부에서 스트림으로 변환 처리 
         Task<bool> UpdateProfileAsync(string email, string? filePath, string? statusMsg);
+
+        /// <summary>
+        /// 2026.05.16 Add
+        /// 특정 유저의 잠금모드 암호를 DB에 업데이트합니다.
+        /// </summary>
+        Task<bool> UpdateLockPasswordAsync(string email, string lockPassword);
     }
 }

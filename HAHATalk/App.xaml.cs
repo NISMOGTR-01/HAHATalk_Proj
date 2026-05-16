@@ -107,7 +107,7 @@ namespace HAHATalk
             services.AddTransient<MainNaviControlViewModel>();
             services.AddTransient<LockScreenViewModel>();
             services.AddTransient<SettingsViewModel>();
-
+            services.AddTransient<LockSettingViewModel>();
 
             services.AddSingleton<FriendListControlViewModel>();
             services.AddSingleton<ChatListControlViewModel>();

@@ -25,5 +25,11 @@ namespace HAHATalk.Server.Repository
 
         // 프로필 이미지 경로 업데이트 
         Task<bool> MSSQL_UpdateProfileImageAsync(string? email, string? imagePath, string? statusMsg);
+
+        /// <summary>
+        /// 2026.05.16 Add
+        /// MSSQL dbo.account 테이블의 lock_pwd 컬럼을 업데이트합니다.
+        /// </summary>
+        Task<bool> MSSQL_UpdateLockPasswordAsync(string email, string lockPassword);
     }
 }

@@ -63,7 +63,8 @@ namespace HAHATalk.Server.Repository
                     nickname AS Nickname, 
                     pwd AS Pwd, 
                     profile_Img AS ProfileImg, 
-                    status_Msg AS StatusMsg
+                    status_Msg AS StatusMsg,
+                    lock_pwd AS LockPassword
                 FROM account 
                 WHERE email = @email";
 
@@ -188,6 +189,48 @@ namespace HAHATalk.Server.Repository
             catch(Exception ex)
             {
                 Log.Error(ex, "[Account] 프로필 업데이트 중 예외 발생 (Email : {Email|}", email);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 2026.05.16 Add
+        /// 잠금모드 비밀번호를 dbo.account 테이블의 lock_pwd 컬럼에 업데이트합니다.
+        /// </summary>
+        public async Task<bool> MSSQL_UpdateLockPasswordAsync(string email, string lockPassword)
+        {
+            // BCrypt 문자열로 해쉬화 
+            string hashedLockPwd = SecurityHelper.HashPassword(lockPassword);
+
+            // 🎯 오타 수정: @LoackPassword -> @LockPassword
+            const string query = @"
+                UPDATE account
+                SET lock_pwd = @LockPassword
+                WHERE email = @Email";
+
+            try
+            {
+                // 부모 RepositoryBase의 커넥션 팩토리 활용 
+                using var db = CreateConnection();
+
+                // 암호화된 변수(hashedLockPwd)를 바인딩하고 오타 매칭 맞춤
+                int rows = await db.ExecuteAsync(query, new
+                {
+                    LockPassword = hashedLockPwd,
+                    Email = email
+                });
+
+                if (rows > 0)
+                {
+                    Log.Information("[Account] 잠금모드 암호 저장 완료 (Email: {Email})", email);
+                }
+
+                return rows > 0;
+            }
+            catch (Exception ex)
+            {
+                // 로그 출력 문자열 괄호 닫기 교정
+                Log.Error(ex, "[Account] 잠금모드 암호 저장 중 예외 발생 (Email : {Email})", email);
                 return false;
             }
         }

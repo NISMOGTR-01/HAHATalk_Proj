@@ -25,5 +25,13 @@ namespace HAHATalk.Server.Models
         // ADD
         [NotMapped]
         public string? RawPassword { get; set; }
+
+        /// <summary>
+        /// 2026.05.16 Add
+        /// 잠금모드에 사용되는 BCrypt 암호화된 60글자 비밀번호 문자열
+        /// DB의 lock_pwd 컬럼과 매칭.
+        /// </summary>
+        [StringLength(64)] // 스키마의 nvarchar(64) 크기와 일치하도록 설정
+        public string? LockPassword { get; set; }
     }
 }

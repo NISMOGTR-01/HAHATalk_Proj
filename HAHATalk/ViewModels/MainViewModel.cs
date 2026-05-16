@@ -6,6 +6,7 @@ using HAHATalk.Services;
 using HAHATalk.Stores;
 using HAHATalk.Views;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 using Microsoft.Identity.Client;
 using System;
 using System.Collections.Generic;
@@ -133,7 +134,6 @@ namespace HAHATalk.ViewModels
         private void NavigateToLogin()
         {
             //
-
             _navigationStore.SlideType = SlideType.RightToLeft;
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)_serviceProvider.GetRequiredService<LoginControlViewModel>(); 
         }
@@ -158,7 +158,7 @@ namespace HAHATalk.ViewModels
             // 2. 현재 화면을 교체한 뒤
             _navigationStore.CurrentViewModel = (INotifyPropertyChanged)vm;
 
-            // 3. 채팅 리스트 뷰모델에게 "야, 화면 떴으니까 데이터 새로 불러와!"라고 신호를 쏴주는 겁니다.
+            // 3. 채팅 리스트 뷰모델에게 "야, 화면 떴으니까 데이터 새로 불러와!"라고 신호를 쏜다.
             WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
         }
 
@@ -236,6 +236,20 @@ namespace HAHATalk.ViewModels
             _navigationService.Navigate(NaviType.LockScreen);
         }
 
-        
+        // 2026.05.16 잠금모드 암호설정 팝업 커맨드 추가 
+        [RelayCommand]
+        public void OpenLockSetting()
+        {
+            // 1. DI 컨테이너에서 뷰모델 가져오기
+            var vm = _serviceProvider.GetRequiredService<LockSettingViewModel>();
+
+            // 2. 윈도우 생성 및 DataContext 바인딩 (OpenSettings와 완전히 동일한 방식!)
+            var lockSettingWin = new LockSettingWindow();
+            lockSettingWin.DataContext = vm;
+            lockSettingWin.Owner = System.Windows.Application.Current.MainWindow;
+
+            // 3. 창 띄우기 (암호 설정의 중요성을 고려해 모달 창인 ShowDialog 사용)
+            lockSettingWin.ShowDialog();
+        }
     }
 }

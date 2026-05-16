@@ -17,6 +17,13 @@
             </MenuItem.Icon>
         </MenuItem>
 
+        <MenuItem Header="잠금모드 암호설정" 
+                  Command="{Binding PlacementTarget.DataContext.OpenLockSettingCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.Icon>
+                <fa6:SvgAwesome Icon="Solid_Key" Width="14" PrimaryColor="Black"/>
+            </MenuItem.Icon>
+        </MenuItem>
+
         <Separator/>
 
         <MenuItem Header="로그아웃" 
