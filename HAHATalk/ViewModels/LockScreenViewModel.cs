@@ -55,9 +55,7 @@ namespace HAHATalk.ViewModels
             {
                 // 프로필이 없을 때 보여줄 기본 이미지 (프로젝트에 Assets 폴더와 이미지가 있어야 함)
                 ProfileImage = "pack://application:,,,/HAHATalk;component/Assets/default_profile.png";
-            }
-
-   
+            }  
         }
 
         [RelayCommand]
