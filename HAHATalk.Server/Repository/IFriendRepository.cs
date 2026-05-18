@@ -16,6 +16,7 @@ namespace HAHATalk.Server.Repository
         // 친구 중복 확인 
         Task<bool> IsFriendAlreadyExistsAsync(string myId, string friendEmail);
 
-
+        // [2026.05.18 추가] 친구 삭제 (DB 물리 삭제)
+        Task<bool> MSSQL_DeleteFriendAsync(string myId, string friendEmail);
     }
 }

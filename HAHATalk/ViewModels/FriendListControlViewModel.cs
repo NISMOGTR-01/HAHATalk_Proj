@@ -366,5 +366,62 @@ namespace HAHATalk.ViewModels
                 // // 
             }
         }
+
+        [RelayCommand]
+        private void OpenChat(Friend selectedFriend)
+        {
+            if (selectedFriend == null) 
+                return;
+
+            // 1) 데모 촬영 및 중복 오픈 방지를 위한 임시 roomId 생성 (내 이메일 + 상대 이메일 조합)
+            // ※ 실제 DB나 서버에서 생성하는 roomId 규칙이 있다면 그 값을 바인딩하거나 넣어주면 됩니다!
+            string myId = _userStore.CurrentUserId;
+            string roomId = $"{myId}_{selectedFriend.TargetEmail}";
+
+            // 2) Zinn이 설계한 오리지널 ShowChatRoom 메소드 호출
+            _windowManager.ShowChatRoom(
+                roomId,
+                selectedFriend.TargetEmail,
+                selectedFriend.FriendName,
+                selectedFriend.ProfileImg
+            );
+        }
+
+        // 우클릭 - 삭제 커맨드 추가 (비동기)
+        [RelayCommand]
+        private async Task DeleteFriend(Friend selectedFriend)
+        {
+            if (selectedFriend == null) 
+                return;
+
+            // 사용자에게 한 번 더 물어보는 기능 추가 
+            var result = MessageBox.Show($"{selectedFriend.FriendName}님을 친구 목록에서 삭제하시겠습니까?",
+                                         "친구 삭제", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    // 1) 백엔드 DB 및 서버(SignalR/API)에 삭제 요청 전송
+                    // (기존 friendService에 DeleteFriendAsync 같은 메서드가 있다고 가정하거나 나중에 추가!)
+                    bool isSuccess = await _friendService.DeleteFriendAsync(_userStore.CurrentUserId, selectedFriend.TargetEmail);
+
+                    if (isSuccess)
+                    {
+                        // 2) 성공 시 UI의 ObservableCollection에서 실시간 제거 (화면에서 즉시 사라짐!)
+                        Friends.Remove(selectedFriend);
+                        FriendsCountText = $"친구 {Friends.Count}명";
+                    }
+                    else
+                    {
+                        MessageBox.Show("친구 삭제에 실패했습니다. 다시 시도해 주세요.", "알림", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"친구 삭제 중 오류 발생: {ex.Message}");
+                }
+            }
+        }
     }
 }

@@ -100,6 +100,31 @@ namespace HAHATalk.Server.Repository
                 return new List<Friend>();
             }
         }
+
+        // 🌟 [2026.05.18 추가] 친구 삭제 처리 (Dapper ExecuteAsync 활용)
+        public async Task<bool> MSSQL_DeleteFriendAsync(string myId, string friendEmail)
+        {
+            const string query = @"
+                DELETE FROM dbo.friends 
+                WHERE my_email = @myId AND target_email = @friendEmail";
+
+            try
+            {
+                using var db = CreateConnection();
+                // 쿼리 실행 후 영향을 받은 행(Row)의 수를 반환.
+                int rowsAffected = await db.ExecuteAsync(query, new { myId, friendEmail });
+
+                Log.Information("[Friend DB] 친구 삭제 완료 (내 계정: {MyId} -> 대상: {FriendEmail})", myId, friendEmail);
+
+                // 삭제된 행이 1개 이상이면 true 반환
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Friend DB] 친구 삭제 중 오류 발생: {MyId} -> {FriendEmail}", myId, friendEmail);
+                return false;
+            }
+        }
     }   
 
 }

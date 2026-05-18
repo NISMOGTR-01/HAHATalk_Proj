@@ -16,5 +16,8 @@ namespace HAHATalk.Services
 
         // 친구 중복 확인 
         Task<bool> IsFriendAlreadyExistsAsync(string myId, string friendEmail);
+
+        // 친구 삭제 기능 
+        Task<bool> DeleteFriendAsync(string myId, string friendEmail);
     }
 }

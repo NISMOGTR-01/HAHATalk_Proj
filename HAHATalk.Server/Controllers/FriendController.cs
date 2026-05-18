@@ -132,5 +132,35 @@ namespace HAHATalk.Server.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        // 🌟 [2026.05.18 추가] 친구 삭제 (DELETE api/Friend/delete/{myId}/{friendEmail})
+        [HttpDelete("delete/{myId}/{friendEmail}")]
+        public async Task<IActionResult> DeleteFriend(string myId, string friendEmail)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(myId) || string.IsNullOrEmpty(friendEmail))
+                {
+                    return BadRequest("잘못된 요청 인자입니다.");
+                }
+
+                // 1) 레포지토리를 통해 DB에서 친구 관계 삭제 요청 (Dapper)
+                // (만약 IFriendRepository에 MSSQL_DeleteFriendAsync가 없다면 임시로 true 반환하게 만들거나 추가 필요)
+                bool isSuccess = await _friendRepository.MSSQL_DeleteFriendAsync(myId, friendEmail);
+
+                if (isSuccess)
+                {
+                    Log.Information("[Friend] 친구 삭제 완료: {MyId} -x-> {Target}", myId, friendEmail);
+                    return Ok(true);
+                }
+
+                return BadRequest("친구 삭제 처리에 실패했습니다.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Friend] 친구 삭제 중 예외 발생: {MyId} -> {Target}", myId, friendEmail);
+                return StatusCode(500, "서버 오류가 발생했습니다.");
+            }
+        }
     }
 }

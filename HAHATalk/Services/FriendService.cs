@@ -119,5 +119,27 @@ namespace HAHATalk.Services
                 return false;
             }
         }
+
+        // 🌟 [2026.05.18 구현] 서버의 HttpDelete API 호출 연동
+        public async Task<bool> DeleteFriendAsync(string myId, string friendEmail)
+        {
+            try
+            {
+                // DELETE 요청 전송: api/Friend/delete/{myId}/{friendEmail}
+                var response = await _httpClient.DeleteAsync($"api/Friend/delete/{myId}/{friendEmail}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // 서버가 보낸 true/false 결과 읽기
+                    return await response.Content.ReadFromJsonAsync<bool>();
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FriendService] DeleteFriendAsync 통신 에러: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

@@ -10,8 +10,8 @@
              mc:Ignorable="d" 
              d:DesignHeight="550" 
              d:DesignWidth="285" 
-             Background="white">
-
+             Background="white"
+             x:Name="RootWindow">
     <UserControl.Resources>
         <libConv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
 
@@ -89,12 +89,34 @@
                 <ItemsControl ItemsSource="{Binding Friends}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,0,0,12" Background="Transparent" Cursor="Hand">
+                            <Grid Margin="0,0,0,12" Background="Transparent" Cursor="Hand"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+
                                 <Grid.InputBindings>
                                     <MouseBinding MouseAction="LeftClick"
-                                  Command="{Binding DataContext.OpenProfileCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                  Command="{Binding DataContext.OpenProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}"/>
                                 </Grid.InputBindings>
+
+                                <Grid.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+
+                                        <MenuItem Header="채팅하기" 
+                                  Command="{Binding OpenChatCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                        <MenuItem Header="프로필 보기" 
+                                  Command="{Binding OpenProfileCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                        <Separator Background="#F3F3F3"/>
+
+                                        <MenuItem Header="삭제" 
+                                  Foreground="#FF4A4A"
+                                  Command="{Binding DeleteFriendCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
 
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="45"/>
