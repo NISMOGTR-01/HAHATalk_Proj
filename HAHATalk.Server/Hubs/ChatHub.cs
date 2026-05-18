@@ -258,7 +258,7 @@ namespace HAHATalk.Server.Hubs
             {
                 await _chatRepository.MarkAsReadAsync(roomId, readerId);
 
-                // 🔥 수정: Clients.User 대신 Clients.Group을 사용해 보세요.
+                // 수정: Clients.User 대신 Clients.Group을 사용.
                 await Clients.Group(roomId).SendAsync("ReceiveReadReceipt", roomId);
 
                 Log.Information($"[읽음신호] {readerId}가 읽음 -> 방 전체에 알림");
@@ -269,6 +269,25 @@ namespace HAHATalk.Server.Hubs
             }
         }
 
-      
+        // 2026.05.18 메세지 삭제 실시간 브로드 캐스팅 추가 
+        public async Task SendDeleteMessage(string roomId, string messageGuid, string targetId)
+        {
+            Log.Information("[SignalR] 메시지 삭제 신호 수신 - 방: {RoomId}, Guid: {MessageGuid} (상대방: {TargetId})",
+                roomId, messageGuid, targetId);
+
+            try
+            {
+                // 1. 해당 채팅방 그룹 전체에 "특정 메시지가 삭제되었다"고 실시간 전송
+                //    클라이언트 SignalRService의 _connection.On<string, string>("MessageDeleted", ...)와 매칭됩니다.
+                await Clients.Group(roomId).SendAsync("MessageDeleted", roomId, messageGuid);
+
+                // 2. (선택사항) 상대방의 채팅 목록 미리보기 텍스트나 안읽음 카운트 동기화를 위해 목록 갱신 신호도 함께 발송
+                await Clients.User(targetId).SendAsync("UpdateChatList");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[ChatHub] 메시지 삭제 신호 전송 중 오류 발생 (Room: {RoomId})", roomId);
+            }
+        }
     }
 }

@@ -23,6 +23,7 @@ namespace HAHATalk.Services
         // 실시간 메시지 수신 이벤트 (보낸사람 이메일, 메시지 내용) 
         event Action<string, string> MessageReceived;
 
+        // 방 참가하기 
         Task JoinRoom(string roomId);
 
         // 추가 : 방 나가기 기능 (2025.05.15)
@@ -35,7 +36,8 @@ namespace HAHATalk.Services
 
 
         Task SendDtoMessageAsync(ChatMessageDto dto, string targetEmail);
-  
-        
+
+        //내가 메시지를 삭제했을 때 서버에 알리는 메서드(필요 시 사용)
+        Task SendDeleteMessageAsync(string roomId, string messageGuid, string targetId);
     }
 }

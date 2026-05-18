@@ -88,6 +88,16 @@ namespace HAHATalk.Services
                 // Messenger를 통해 ChatRoomViewModel에 알림 
                 WeakReferenceMessenger.Default.Send(new MessagesReadMessage(roomId));
             });
+
+            // 서버에서 특정 메세지가 삭제되었다고 알려올 때 
+            // 서버의 메서드명(예: "MessageDeleted" 또는 "ReceiveMessageDeleted")에 맞게 첫 번째 인자를 조절하세요.
+            _connection.On<string, string>("MessageDeleted", (roomId, messageGuid) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[SignalR] 메시지 삭제 수신 - 방: {roomId}, Guid: {messageGuid}");
+
+                // MVVM 메신저를 통해 ChatRoomViewModel에 실시간 삭제 알림 발송
+                WeakReferenceMessenger.Default.Send(new MessageDeletedMessage(roomId, messageGuid));
+            });
         }
 
         // 현재 연결상태 반환 
@@ -273,7 +283,24 @@ namespace HAHATalk.Services
                 System.Diagnostics.Debug.WriteLine($"[SignalR] LeaveRoom 에러: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// 내가 메시지를 삭제한 사실을 서버를 통해 상대방에게 실시간 전송
+        /// </summary>
+        public async Task SendDeleteMessageAsync(string roomId, string messageGuid, string targetId)
+        {
+            if (_connection != null && _connection.State == HubConnectionState.Connected)
+            {
+                try
+                {
+                    // 서버 Hub의 SendDeleteMessage(roomId, messageGuid, targetId) 호출
+                    await _connection.InvokeAsync("SendDeleteMessage", roomId, messageGuid, targetId);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SignalR] 삭제 신호 전송 실패: {ex.Message}");
+                }
+            }
+        }
     }
-
-
 }

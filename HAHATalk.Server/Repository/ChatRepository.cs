@@ -5,7 +5,7 @@ using HAHATalk.Server.Repository;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using Serilog;
-using HAHATalk.Server.Repository;
+
 
 namespace HAHATalk.Server.Repository
 {
@@ -311,6 +311,24 @@ namespace HAHATalk.Server.Repository
             catch(Exception ex)
             {
                 Log.Error(ex, "멤버 초대 중 오류 발생 (RoomId: {RoomId}, UserId: {UserId})", roomId, userId);
+                return false;
+            }
+        }
+
+        // 2026.05.18 채팅 메세지 삭제 추가 
+        public async Task<bool> MSSQL_DeleteMessageAsync(string messageGuid)
+        {
+            const string query = "DELETE FROM ChatMessage WHERE MessageGuid = @MessageGuid";
+
+            try
+            {
+                using var db = CreateConnection();
+                int rowsAffected = await db.ExecuteAsync(query, new { MessageGuid = messageGuid });
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "메시지 삭제 중 오류 발생 (MessageGuid: {MessageGuid})", messageGuid);
                 return false;
             }
         }

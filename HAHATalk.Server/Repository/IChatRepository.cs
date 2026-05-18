@@ -36,5 +36,8 @@ namespace HAHATalk.Server.Repository
 
         // 새로운 멤버 추가 
         Task<bool> MSSQL_AddChatMemberAsync(string roomId, string userId);
+
+        // 메세지 삭제 기능 추가 
+        Task<bool> MSSQL_DeleteMessageAsync(string messageGuid);
     }
 }

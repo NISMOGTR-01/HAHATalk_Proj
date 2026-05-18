@@ -31,5 +31,7 @@ namespace HAHATalk.Services
         // 2026.05.11 Add 
         Task<FileUploadResponseDto> UploadFileExtendedAsync(string localFilePath);
 
+        // 2026.05.18 Add 
+        Task<bool> DeleteMessageAsync(string roomId, string messageGuid);
     }
 }

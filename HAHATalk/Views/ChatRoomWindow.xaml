@@ -19,7 +19,16 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <DataTemplate x:Key="MyTextTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Right">
+            <Grid Margin="10,5" HorizontalAlignment="Right" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                     <StackPanel VerticalAlignment="Bottom" Margin="0,0,5,2">
                         <TextBlock x:Name="ReadCounter" Text="1" FontSize="11" Foreground="#FEE500" FontWeight="Bold">
@@ -34,7 +43,6 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-
                         <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666"/>
                     </StackPanel>
 
@@ -46,11 +54,19 @@
         </DataTemplate>
 
         <DataTemplate x:Key="MyImageTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Right">
+            <Grid Margin="10,5" HorizontalAlignment="Right" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                     <StackPanel VerticalAlignment="Bottom" Margin="0,0,5,2">
-                        <TextBlock Text="1" FontSize="11" Foreground="#FEE500" FontWeight="Bold"
-                                   HorizontalAlignment="Right">
+                        <TextBlock Text="1" FontSize="11" Foreground="#FEE500" FontWeight="Bold" HorizontalAlignment="Right">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Visible"/>
@@ -67,29 +83,33 @@
 
                     <Border CornerRadius="10" ClipToBounds="True" Background="#FEE500">
                         <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                        CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0">
+                                CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0">
                             <Image Source="{Binding FilePath}" MaxWidth="200" Stretch="Uniform"/>
                         </Button>
                     </Border>
-
                 </StackPanel>
             </Grid>
         </DataTemplate>
 
         <DataTemplate x:Key="OtherTextTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Left">
+            <Grid Margin="10,5" HorizontalAlignment="Left" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Width="35" Height="35" 
-                        VerticalAlignment="Top" Margin="0,0,8,0" 
-                        CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
-                    <Image Stretch="UniformToFill"
-                            HorizontalAlignment="Center" 
-                            VerticalAlignment="Center"
-                            Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
+                <Border Grid.Column="0" Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0" CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
+                    <Image Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
                 </Border>
 
                 <StackPanel Grid.Column="1">
@@ -105,66 +125,70 @@
         </DataTemplate>
 
         <DataTemplate x:Key="OtherImageTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Left">
+            <Grid Margin="10,5" HorizontalAlignment="Left" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Width="35" Height="35" 
-                        VerticalAlignment="Top" Margin="0,0,8,0" 
-                        CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
-                    <Image Stretch="UniformToFill"
-                            HorizontalAlignment="Center" 
-                            VerticalAlignment="Center"
-                            Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
-                    
+                <Border Grid.Column="0" Width="35" Height="35" VerticalAlignment="Top" Margin="0,0,8,0" CornerRadius="17.5" ClipToBounds="True" Background="#D0D0D0">
+                    <Image Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Source="{Binding DisplayProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}"/>
                 </Border>
 
                 <StackPanel Grid.Column="1">
-                    <TextBlock Text="{Binding SenderName}" 
-                       FontSize="11" 
-                       Margin="0,0,0,5" 
-                       FontWeight="Bold" 
-                       Foreground="#444444"/>
-
+                    <TextBlock Text="{Binding SenderName}" FontSize="11" Margin="0,0,0,5" FontWeight="Bold" Foreground="#444444"/>
                     <StackPanel Orientation="Horizontal">
                         <Border CornerRadius="10" ClipToBounds="True">
                             <Button Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding FilePath}" 
-                            Background="Transparent" 
-                            BorderThickness="0"
-                            Cursor="Hand">
-                                <Image Source="{Binding FilePath}" 
-                               MaxWidth="200" 
-                               Stretch="Uniform"/>
+                                    CommandParameter="{Binding FilePath}" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                                <Image Source="{Binding FilePath}" MaxWidth="200" Stretch="Uniform"/>
                             </Button>
                         </Border>
-
-                        <TextBlock Text="{Binding FormattedTime}" 
-                           FontSize="10" 
-                           Foreground="#666666" 
-                           VerticalAlignment="Bottom" 
-                           Margin="5,0,0,0"/>
+                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#666666" VerticalAlignment="Bottom" Margin="5,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
         </DataTemplate>
 
         <DataTemplate x:Key="FileTemplate">
-            <Border Background="White" CornerRadius="10" Padding="10" Margin="5,2" BorderBrush="LightGray" BorderThickness="1">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
-                </StackPanel>
-            </Border>
+            <Grid Background="Transparent" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A" Command="{Binding DeleteMessageCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+                <Border Background="White" CornerRadius="10" Padding="10" Margin="5,2" BorderBrush="LightGray" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </DataTemplate>
 
         <DataTemplate x:Key="MyFileTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Right">
+            <Grid Margin="10,5" HorizontalAlignment="Right" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
                 <Border Background="White" CornerRadius="10,0,10,10" Padding="10" BorderBrush="#E1E1E1" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📄" FontSize="20" Margin="0,0, 10,0"/>
+                        <TextBlock Text="📄" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold" Foreground="#333333"/>
                     </StackPanel>
                 </Border>
@@ -172,15 +196,21 @@
         </DataTemplate>
 
         <DataTemplate x:Key="OtherFileTemplate">
-            <Grid Margin="10,5" HorizontalAlignment="Left">
-                <StackPanel Orientation="Horizontal">
-                    <Border Background="White" CornerRadius="0,10,10,10" Padding="10" BorderBrush="#D0D0D0" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
-                            <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+            <Grid Margin="10,5" HorizontalAlignment="Left" Background="Transparent"
+                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Grid.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="삭제" Foreground="#FF4A4A"
+                                  Command="{Binding DeleteMessageCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+                <Border Background="White" CornerRadius="0,10,10,10" Padding="10" BorderBrush="#D0D0D0" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📁" FontSize="20" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </DataTemplate>
 
@@ -207,43 +237,25 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" 
-                    Width="50" 
-                    Height="50" 
-                    Margin="15,0,0,0" 
-                    CornerRadius="25" 
-                    Background="White" 
-                    ClipToBounds="True"
-                    VerticalAlignment="Center">
-
-                <Image Source="{Binding TargetProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" 
-                       Stretch="UniformToFill" 
-                       HorizontalAlignment="Center" 
-                       VerticalAlignment="Center"/>
+            <Border Grid.Column="0" Width="50" Height="50" Margin="15,0,0,0" CornerRadius="25" Background="White" ClipToBounds="True" VerticalAlignment="Center">
+                <Image Source="{Binding TargetProfile, TargetNullValue='/Assets/basic_Profile.png', FallbackValue='/Assets/basic_Profile.png'}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
-                <TextBlock Text="{Binding TargetName}" 
-                   FontSize="16" FontWeight="SemiBold" Foreground="#2C2C2C"/>
-
+                <TextBlock Text="{Binding TargetName}" FontSize="16" FontWeight="SemiBold" Foreground="#2C2C2C"/>
                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Opacity="0.6">
-                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" 
-                       FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <TextBlock Text="{Binding ParticipantCount}" 
-                       FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBlock Text="{Binding ParticipantCount}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
 
-            <Button Grid.Column="2" Width="45" Height="45" Margin="0,0,10,0"
-                    Background="Transparent" BorderThickness="0"
-                    VerticalAlignment="Center" Click="CloseButton_Click" Cursor="Hand">
+            <Button Grid.Column="2" Width="45" Height="45" Margin="0,0,10,0" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" Click="CloseButton_Click" Cursor="Hand">
                 <TextBlock Text="✕" FontSize="20" Foreground="#555555"/>
             </Button>
         </Grid>
 
         <ScrollViewer Grid.Row="1" x:Name="ChatScroller" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Messages}"
-                          ItemTemplateSelector="{StaticResource ChatTemplateSelector}">
+            <ItemsControl ItemsSource="{Binding Messages}" ItemTemplateSelector="{StaticResource ChatTemplateSelector}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel/>
@@ -259,23 +271,14 @@
                     <RowDefinition Height="40"/>
                 </Grid.RowDefinitions>
 
-                <TextBox x:Name="MessageInput" Grid.Row="0"
-                         Text="{Binding InputMessage, UpdateSourceTrigger=PropertyChanged}"
-                         AcceptsReturn="True" TextWrapping="Wrap"
-                         BorderThickness="0" Margin="10" FontSize="14"
-                         VerticalScrollBarVisibility="Auto" KeyDown="MessageInput_KeyDown"/>
+                <TextBox x:Name="MessageInput" Grid.Row="0" Text="{Binding InputMessage, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" BorderThickness="0" Margin="10" FontSize="14" VerticalScrollBarVisibility="Auto" KeyDown="MessageInput_KeyDown"/>
 
                 <Grid Grid.Row="1" Margin="10 0 10 10">
-                    <Button Command="{Binding SelectFileCommand}"
-                            HorizontalAlignment="Left" VerticalAlignment="Center"
-                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="파일보내기">
+                    <Button Command="{Binding SelectFileCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="파일보내기">
                         <TextBlock Text="&#xE723;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#404040"/>
                     </Button>
 
-                    <Button Content="전송" HorizontalAlignment="Right"
-                            Command="{Binding SendMessageCommand}"
-                            Background="#FEE500" Width="60" Height="30" FontWeight="Bold"
-                            BorderThickness="0">
+                    <Button Content="전송" HorizontalAlignment="Right" Command="{Binding SendMessageCommand}" Background="#FEE500" Width="60" Height="30" FontWeight="Bold" BorderThickness="0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="3"/>

@@ -55,9 +55,9 @@ namespace HAHATalk.ViewModels
 
         // CloseAction 속성 추가 
         public System.Action? CloseAction { get; set; }
-        
-        // 생성자 : 누구와의 채팅방인지 정보를 받음 
-        public ChatRoomViewModel(
+
+        // 생성자 : 누구와의 채팅방인지 정보를 받음 
+        public ChatRoomViewModel(
             string roomId,
             string targetId,
             string targetName,
@@ -69,7 +69,7 @@ namespace HAHATalk.ViewModels
         {
             RoomId = roomId;
             _targetId = targetId;
-            _targetName = targetName;     
+            _targetName = targetName;
             _chatService = chatService;
             _userStore = userStore;
             _signalRService = signalRService;
@@ -102,18 +102,117 @@ namespace HAHATalk.ViewModels
 
             // 2024.04.22 서버에서 SignalR로 메세지가 오면 Messenger가 이 신호를 낚아 챈다
             // 상대방이 내가 보낸 메세지를 읽었을때 
-            WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
+            WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
             {
                 // 방번호가 다른 경우 
-                if (m.Message.RoomId != this.RoomId) 
+                if (m.Message.RoomId != this.RoomId)
+                    return;
+
+                var incoming = m.Message;
+
+                App.Current.Dispatcher.Invoke(async () =>
+                {
+                    // -----------------------------------------------------------
+                    // 🔥 [방법 B 핵심] 내가 보낸 임시 메시지가 이미 리스트에 있는지 확인 (텍스트/파일 공통)
+                    // -----------------------------------------------------------
+                    if (incoming.SenderId == _userStore.CurrentUserEmail || incoming.SenderId == _userStore.CurrentUserId)
+                    {
+                        // 아직 Guid가 제대로 매핑되지 않았거나 화면에 임시로 떠 있는 내 메시지를 검색
+                        // (내용이 같고, 내가 보낸 것 중 Guid 매핑이 필요한 타겟팅)
+                        var tempMessage = Messages.FirstOrDefault(x => x.IsMine
+                                                                    && (x.MessageGuid == incoming.MessageGuid
+                                                                        || x.Message == incoming.Message
+                                                                        || x.FileName == incoming.FileName)
+                                                                    && x.SendState != (int)ChatMessage.MessageStatus.Fail);
+
+                        if (tempMessage != null)
+                        {
+                            // 서버가 DB 확정 후 보내준 진짜 정보를 UI 객체에 덮어씌웁니다.
+                            tempMessage.MessageGuid = incoming.MessageGuid;
+                            tempMessage.FilePath = incoming.FilePath;
+                            tempMessage.SendState = (int)ChatMessage.MessageStatus.Success;
+
+                            System.Diagnostics.Debug.WriteLine($"[내 메시지 실시간 동기화 완료] Guid 매핑 성공: {tempMessage.MessageGuid}");
+                            return; // 내 거 동기화 끝났으므로 아래 새로 추가하는 로직은 건너뜁니다.
+                        }
+
+                        return; // 만약 이미 처리된 내 메시지라면 중복 추가 방지
+                    }
+
+                    // 이미 리스트에 존재하는 메시지인지 Guid로 체크 (상대방 메시지 중복 방지) 
+                    if (Messages.Any(x => x.MessageGuid == incoming.MessageGuid))
+                    {
+                        return;
+                    }
+
+                    // -----------------------------------------------------------
+                    // 상대방이 보낸 메시지인 경우 기존 처리 로직 수행
+                    // -----------------------------------------------------------
+                    var newMessage = new ChatMessage
+                    {
+                        MessageGuid = incoming.MessageGuid, // Guid 반드시 할당
+                        RoomId = incoming.RoomId,
+                        SenderId = incoming.SenderId,
+                        SenderName = (string.IsNullOrEmpty(incoming.SenderName) || incoming.SenderName.Contains("@"))
+                                     ? TargetName : incoming.SenderName,
+
+                        SenderProfile = string.IsNullOrEmpty(incoming.SenderProfile)
+                            ? TargetProfile
+                            : (incoming.SenderProfile.StartsWith("http") ? incoming.SenderProfile : _chatService.GetServerFullUrl(incoming.SenderProfile)),
+
+                        Message = incoming.Message,
+                        MessageType = incoming.MessageType,
+                        FilePath = incoming.FilePath,
+                        FileName = incoming.FileName,
+                        SendTime = incoming.SendTime,
+                        IsRead = IsWindowActive,
+                        IsMine = false
+                    };
+
+                    // 리스트에 추가
+                    Messages.Add(newMessage);
+
+                    // 내 로컬 DB의 채팅 목록 및 뱃지 업데이트
+                    await _chatService.UpdateChatListAsync(
+                        newMessage,
+                        _targetId,
+                        _targetName,
+                        _userStore.CurrentUserId,
+                        _userStore.CurrentUserNickname);
+
+                    WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+
+                    // 내가 창을 보고 있다면 즉시 '읽음' 신호를 서버에 쏜다
+                    if (IsWindowActive)
+                    {
+                        try
+                        {
+                            await _chatService.MarkAsReadAsync(RoomId, _userStore.CurrentUserId);
+                            await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
+                            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"실시간 읽음 처리 실패: {ex.Message}");
+                        }
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Render);
+            });
+
+
+            /*
+            WeakReferenceMessenger.Default.Register<NewMessageReceivedMessage>(this, (r, m) =>
+            {
+                // 방번호가 다른 경우 
+                if (m.Message.RoomId != this.RoomId)
                     return;
 
                 // 내가 보낸 메시지가 다시 돌아온 경우 
-                if (m.Message.SenderId == _userStore.CurrentUserEmail) 
+                if (m.Message.SenderId == _userStore.CurrentUserEmail)
                     return;
 
                 // 이미 리스트에 존재하는 메시지인지 Guid로 체크 (2026.05.13) 
-                if(Messages.Any(x => x.MessageGuid == m.Message.MessageGuid))
+                if (Messages.Any(x => x.MessageGuid == m.Message.MessageGuid))
                 {
                     return;
                 }
@@ -189,16 +288,17 @@ namespace HAHATalk.ViewModels
                             await _signalRService.SendReadReceiptAsync(RoomId, _targetId);
 
                             // 읽었으니 숫자를 다시 0으로 만들기 위해 목록 갱신
-                            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());                            
+                            WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
                         }
                         catch (Exception ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"실시간 읽음 처리 실패: {ex.Message}");
                         }
-                    }                    
+                    }
                 }, System.Windows.Threading.DispatcherPriority.Render // 즉시 그리도록 우선순위 조정 
                 );
             });
+            */
 
             // 2026.04.22 상대방이 내가 보낸 메시지를 읽었을 때 처리
             WeakReferenceMessenger.Default.Register<MessagesReadMessage>(this, (r, m) =>
@@ -249,6 +349,25 @@ namespace HAHATalk.ViewModels
                     CloseAction?.Invoke();
                 });
             });
+
+            // 2026.05.18 상대방이 실시간으로 메시지를 삭제했을 때 처리
+            WeakReferenceMessenger.Default.Register<MessageDeletedMessage>(this, (r, m) =>
+            {
+                // 다른 방에서 지운 거라면 무시
+                if (!string.Equals(m.RoomId, this.RoomId, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    // 내 메모리 컬렉션에서 해당 Guid를 가진 메시지를 찾아 제거
+                    var targetMsg = Messages.FirstOrDefault(x => x.MessageGuid == m.MessageGuid);
+                    if (targetMsg != null)
+                    {
+                        Messages.Remove(targetMsg);
+                        System.Diagnostics.Debug.WriteLine($"[실시간삭제반영성공] Guid: {m.MessageGuid}");
+                    }
+                });
+            });
         }
 
         private async Task LoadMessagesFromDb()
@@ -270,10 +389,10 @@ namespace HAHATalk.ViewModels
                             msg.IsMine = (msg.SenderId == _userStore.CurrentUserId);
 
                             // 상대방 프로필 및 이름 보정 
-                            if(!msg.IsMine)
+                            if (!msg.IsMine)
                             {
                                 // 이름이 비어있거나 이메일 형식이면 TargetName으로 교체 
-                                if(string.IsNullOrEmpty(msg.SenderName) || msg.SenderName.Contains("@"))
+                                if (string.IsNullOrEmpty(msg.SenderName) || msg.SenderName.Contains("@"))
                                 {
                                     msg.SenderName = this.TargetName;
                                 }
@@ -281,7 +400,7 @@ namespace HAHATalk.ViewModels
                                 // 프로필 경로 보정: DB에서 온 상대 경로를 서버 URL과 합침
                                 string rawProfile = !string.IsNullOrEmpty(msg.SenderProfile) ? msg.SenderProfile : this.TargetProfile;
 
-                             
+
                                 if (!string.IsNullOrEmpty(rawProfile))
                                 {
                                     msg.SenderProfile = rawProfile.StartsWith("http")
@@ -331,6 +450,8 @@ namespace HAHATalk.ViewModels
             if (string.IsNullOrWhiteSpace(InputMessage))
                 return;
 
+            string currentInput = InputMessage;
+
             // 가상의 전송 로직 (나중에 SignalR/API 연동 부분) 
             var myMsg = new ChatMessage
             {
@@ -339,26 +460,26 @@ namespace HAHATalk.ViewModels
                 SenderId = _userStore.CurrentUserId,
                 SenderName = _userStore.CurrentUserNickname,
                 SenderProfile = _userStore.CurrentUserProfile, // 내 프로필 경로 추가 
-                Message = InputMessage,
+                Message = currentInput,
                 SendTime = DateTime.Now,
                 IsMine = true,
                 IsRead = false,     // DB 컬럼 대응 
                 MessageType = 0,    // 기본 텍스트 타입 
-                SendState = (int)ChatMessage.MessageStatus.Success  // 
+                SendState = (int)ChatMessage.MessageStatus.Sending  // 
             };
 
             // UI에 즉시 추가 
             Messages.Add(myMsg);
-            string currentInput = InputMessage;
+   
             // 입력창 비우기 
             InputMessage = string.Empty;
 
             // 서버 전송 및 DB 저장 로직 수행 
             try
             {
-               
+
                 await _signalRService.SendMessageAsync(RoomId, TargetId, currentInput);
-                await _chatService.UpdateChatListAsync(myMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);                
+                await _chatService.UpdateChatListAsync(myMsg, TargetId, TargetName, _userStore.CurrentUserId, _userStore.CurrentUserNickname);
 
                 WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
 
@@ -693,14 +814,58 @@ namespace HAHATalk.ViewModels
             }
         }
 
-        // 삭제 커맨드 (실패한 메시지가 보기 싫은 경우) 
+        // 내가 메시지를 삭제할 때 로컬 UI/DB 처리 및 상대방에게 실시간 전송
         [RelayCommand]
-        private void DeleteMessage(ChatMessage msg)
+        private async Task DeleteMessageAsync(ChatMessage msg)
         {
-            if (msg != null && Messages.Contains(msg))
-            {
-                Messages.Remove(msg);
+            // 메세지가 없거나 
+            // 내가 보낸 메세지가 아니 ㄴ경우 프로세스 차단 
+            if (msg == null || !msg.IsMine) 
+                return;
 
+            try
+            {
+                // 1. 만약 전송 실패(Fail) 상태인 메시지라면, 
+                //    서버/DB에 데이터가 없을 테니 바로 UI에서만 지우고 종료.
+                if (msg.SendState == (int)ChatMessage.MessageStatus.Fail)
+                {
+                    if (Messages.Contains(msg))
+                    {
+                        App.Current.Dispatcher.Invoke(() => Messages.Remove(msg));
+                    }
+
+                    return;
+                }
+
+                // 2. 내 로컬 및 서버 DB에서 메시지 삭제 처리 
+                bool isDeletedFromDb = await _chatService.DeleteMessageAsync(msg.RoomId, msg.MessageGuid);
+
+                if (isDeletedFromDb)
+                {
+                    // 3. 내 메모리 컬렉션(UI)에서 제거
+                    if (Messages.Contains(msg))
+                    {
+                        App.Current.Dispatcher.Invoke(() => Messages.Remove(msg));
+                    }
+
+                    // 4. SignalR 서비스를 통해 상대방에게 실시간 삭제 신호 전송!
+                    //    상대방의 이메일(_targetId)을 targetId 인자로 넘겨줍니다.
+                    await _signalRService.SendDeleteMessageAsync(RoomId, msg.MessageGuid, _targetId);
+
+                    // 5. (선택 사항) 만약 방의 마지막 메시지를 지운 거라면 
+                    //    목록 화면의 텍스트도 갱신되도록 목록 새로고침 신호 발송
+                    WeakReferenceMessenger.Default.Send(new RefreshChatListMessage());
+
+                    System.Diagnostics.Debug.WriteLine($"[메시지 삭제 및 실시간 전송 완료] Guid: {msg.MessageGuid}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[메시지 삭제 실패] DB 처리 오류: {msg.MessageGuid}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DeleteMessage 에러] : {ex.Message}");
             }
         }
 

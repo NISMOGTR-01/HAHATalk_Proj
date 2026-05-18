@@ -249,6 +249,28 @@ namespace HAHATalk.Services
             return null;
         }
 
+        public async Task<bool> DeleteMessageAsync(string roomId, string messageGuid)
+        {
+            try
+            {
+                // 서버 컨트롤러 구조에 맞춰 엔드포인트 호출 (기존 작성 사양 유지)
+                var response = await _httpClient.DeleteAsync($"{BaseUrl}/message/{messageGuid}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[DeleteMessageAsync] 서버 에러: {response.StatusCode}, {error}");
+                }
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"서버 메시지 삭제 요청 실패: {ex.Message}");
+                return false;
+            }
+        }
+
         // 응답을 받기 위한 내부 클래스 
         public class UploadResponse { public string Url { get; set; } }
     }

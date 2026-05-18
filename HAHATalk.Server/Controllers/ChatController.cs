@@ -232,5 +232,34 @@ namespace HAHATalk.Server.Controllers
             }
            
         }
+
+        //2026.05.18
+        [HttpDelete("message/{messageGuid}")]
+        public async Task<IActionResult> DeleteMessage(string messageGuid)
+        {
+            if (string.IsNullOrEmpty(messageGuid))
+                return BadRequest("MessageGuid가 유효하지 않습니다.");
+
+            try
+            {
+                // Repository를 통해 DB에서 해당 Guid 메시지 삭제 (혹은 IsDeleted = 1 상태 변경)
+                bool isDeleted = await _chatRepository.MSSQL_DeleteMessageAsync(messageGuid);
+
+                if (!isDeleted)
+                {
+                    Log.Warning("[Chat] 삭제할 메시지를 찾을 수 없거나 실패 (Guid: {MessageGuid})", messageGuid);
+                    return NotFound("삭제할 메시지를 찾을 수 없습니다.");
+                }
+
+                Log.Information("[Chat] 메시지 삭제 완료 (Guid: {MessageGuid})", messageGuid);
+                return Ok(true); // 클라이언트의 response.IsSuccessStatusCode 조건에 맞춰 단순 true 반환도 좋습니다.
+            }
+            catch (Exception ex)
+            {
+                // 다른 메서드들처럼 Serilog 에러 로그 기록 추가
+                Log.Error(ex, "[Chat] 메시지 삭제 중 서버 예외 발생 (Guid: {MessageGuid})", messageGuid);
+                return StatusCode(500, "메시지를 삭제하는 중 서버 오류가 발생했습니다.");
+            }
+        }
     }
 }
