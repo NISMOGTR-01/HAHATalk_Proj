@@ -18,9 +18,9 @@
 * **Language**: C# (.NET 10)
 * **Framework**: WPF (Windows Presentation Foundation)
 * **Real-time**: **ASP.NET Core SignalR** (실시간 양방향 통신 허브 설계)
-* **Pattern**: MVVM (CommunityToolkit.Mvvm)
+* **Pattern**: MVVM (CommunityToolkit.Mvvm) / Repository / WindowManager
 * **Database**: MSSQL (Entity Framework Core 기반 데이터 매핑)
-* **State Management**: Singleton Store Pattern
+* **State Management**: Singleton Store Pattern (`UserStore`)
 * **Infrastructure**: Windows Server, MSSQL DB Engine
 
 ---
@@ -39,6 +39,10 @@
 * **Issue**: 서버의 프로필 이미지가 업데이트되었음에도 클라이언트에서 이전 이미지를 계속 보여주는 현상.
 * **Solution**: 이미지 경로 뒤에 **Query String(Ticks)**을 추가하여 브라우저/WPF 캐시를 우회하고, 실시간으로 변경된 리소스를 로드하도록 처리.
 
+### 4. UI 선반영 구조에서의 실시간 삭제 동작 분기 오작동 해결 (추가 🌟)
+* **Issue**: 사용자 경험 향상을 위해 메시지 발송 시 UI에 데이터를 먼저 선반영(`Messages.Add`)하고 서버 통신을 비동기로 처리하도록 개선함. 그러나 메시지가 서버 DB에 최종 등록되기 전에 사용자가 즉시 '삭제'를 시도할 경우, 클라이언트가 생성한 임시 `MessageGuid`와 서버가 발급한 실제 `MessageGuid`가 불일치하여 `404 Not Found` 에러와 함께 삭제 쿼리가 실패하는 현상 확인.
+* **Solution**: 메시지 발송 메서드(`SendMessage`) 시작 시 전송 상태를 `MessageStatus.Sending`으로 UI에 먼저 마킹하고, 서버 통신 완료 후 수신부(`NewMessageReceivedMessage`) 측에서 `Message` 텍스트 내용과 `SenderId` 조건을 기반으로 객체를 추적하도록 처리. 서버가 확정한 실제 `MessageGuid`로 동적 교체(스위칭) 및 `SendState = Success` 갱신 플로우를 완성하여, 선반영 직후 즉각적인 삭제 요청 시에도 데이터 정합성이 깨지지 않도록 로직을 고도화함.
+
 ---
 
 ## 📅 개발 히스토리 (Monthly Log)
@@ -56,6 +60,12 @@
 * **Reliability**: 프로필 편집 로직의 데이터 무결성 확보 및 **WeakReferenceMessenger** 기반 이벤트 아키텍처 완성.
 * **Refactoring**: 인터페이스 기반 예외 처리 강화 및 전역 상태 저장소(UserStore) 최적화.
 
+### **2026-05: UX/UI 사용성 개선 및 동기화 아키텍처 예외 처리 (추가 🌟)**
+* **UX**: 메시지 전송 시 딜레이 없는 **UI 선반영 구조** 설계 및 전송 상태 세분화 (`Sending`, `Success`, `Fail`).
+* **UI**: 전송 대기 중 상태일 때 메시지 옆에 시계 아이콘(대기 마크)을 표기하고, 성공/실패 여부에 따라 상태를 실시간 갱신하는 애니메이션 대응 데이터 바인딩 추가.
+* **Synchronization**: SignalR 통신 도중 네트워크 끊김이나 예외 발생 시 `MessageStatus.Fail` 플래그로 즉각 전환되도록 예외 안전성(Exception Safety) 확보.
+* **Data Flow**: 방 진입(과거 내역 조회) 시 서버 DTO와 로컬 `ChatMessage` 간의 무결한 Guid 매핑 검증 및 실시간 갱신 프로세스 안정화.
+
 ---
 
 ## ✨ 핵심 기능
@@ -63,43 +73,44 @@
 * **전역 상태 관리**: `UserStore`를 통한 로그인 세션 및 프로필 데이터의 실시간 동기화.
 * **보안 최적화**: 민감 정보 분리 및 환경별 설정(Local/Dev/Prod) 대응 구조.
 * **비동기 처리**: TPL 기반 비동기 로직으로 UI Freezing 현상 근본적 해결.
+* **상태 기반 UI 렌더링**: 메시지별 발송 상태 수명 주기(`Sending` -> `Success`/`Fail`) 최적화 알고리즘 탑재. (추가 🌟)
 
 ---
 
-## 🛠 아키텍처 고도화 및 업데이트 내역 (2026.04.30)
+## 🛠 아키텍처 고도화 및 업데이트 내역 (2026.05.18 업데이트)
 
 기존 시스템의 확장성과 실시간성 문제를 해결하기 위해 **Repository 패턴**과 **SignalR Hub**를 활용한 **U-Turn Flow** 통신 구조를 도입하였습니다.
 
 ### 1. 서버 계층 구조 고도화 (Repository & DI)
 데이터 접근 로직을 인터페이스로 추상화하여 비즈니스 로직과의 결합도를 낮추고 유지보수성을 극대화했습니다.
-*   **IAccountRepository**: 사용자 계정 보안 및 인증 프로세스 관리
-*   **IFriendRepository**: 친구 목록 조회 및 관계 데이터 관리
-*   **IChatRepository**: 채팅 메시지 영속성 저장 및 읽음 상태(IsRead) 관리
-*   **Dependency Injection**: `Program.cs`에서 인터페이스 기반 의존성 주입을 통해 객체 생명주기 관리
+* **IAccountRepository**: 사용자 계정 보안 및 인증 프로세스 관리
+* **IFriendRepository**: 친구 목록 조회 및 관계 데이터 관리
+* **IChatRepository**: 채팅 메시지 영속성 저장, 읽음 상태(`IsRead`), 실시간 삭제 처리(`MSSQL_DeleteMessageAsync`) 관리
+* **Dependency Injection**: `Program.cs`에서 인터페이스 기반 의존성 주입을 통해 객체 생명주기 관리
 
 ### 2. 실시간 데이터 흐름 (U-Turn Flow) 구축
 메시지의 유실 방지와 실시간 전파를 동시에 충족하기 위해 다음과 같은 흐름을 설계했습니다.
 
-> **Flow Path:** 
-> `Client Service` → `Server Controller` → `Server Repository (DB 저장 완료)` → `ChatHub (전용 회선)` → `Target Clients (즉시 수신)`
+> **Flow Path:** > `Client Service` → `Server Controller` → `Server Repository (DB 저장 완료)` → `ChatHub (전용 회선)` → `Target Clients (즉시 수신)`
 
-*   **안정성**: 모든 실시간 알림은 DB 저장이 성공한 직후에만 전송되도록 보장합니다.
-*   **실시간성**: 별도의 요청 없이도 서버가 클라이언트에 데이터를 직접 Push하는 구조입니다.
+* **안정성**: 모든 실시간 알림은 DB 저장이 성공한 직후에만 전송되도록 보장합니다.
+* **실시간성**: 별도의 요청 없이도 서버가 클라이언트에 데이터를 직접 Push하는 구조입니다.
 
 ### 3. 데이터 모델 최적화 (CommonLib)
 서버와 클라이언트 간 공유 라이브러리를 강화하여 데이터 전송의 안전성을 높였습니다.
-*   **record 도입**: `public record`를 사용하여 전송 과정에서 데이터가 변조되지 않도록 불변성(Immutable)을 확보했습니다.
-*   **MessageType 규격화**: Enum을 통해 메시지 성격을 명확히 구분하여 향후 기능 확장을 대비했습니다.
-    *   `Text`: 일반 텍스트 대화
-    *   `Image / File`: 멀티미디어 전송 지원 예정
-    *   `System`: 방 입장/퇴장 알림 및 읽음 확인('1' 제거) 신호
+* **record 도입**: `public record`를 사용하여 전송 과정에서 데이터가 변조되지 않도록 불변성(Immutable)을 확보했습니다.
+* **MessageType 규격화**: Enum을 통해 메시지 성격을 명확히 구분하여 향후 기능 확장을 대비했습니다.
+    * `Text`: 일반 텍스트 대화
+    * `Image / File`: 멀티미디어 전송 지원 예정
+    * `System`: 방 입장/퇴장 알림 및 읽음 확인('1' 제거) 신호
 
 ### 4. 주요 기능 개선 사항
-*   **실시간 읽음 동기화**: 채팅방 진입 시 미확인 메시지를 일괄 업데이트하며, `ChatHub`를 통해 상대방 UI의 읽음 표시를 즉시 갱신하도록 로직을 수정했습니다.
-*   **MVVM 패턴 준수**: 서버 연동 방식이 변경되어도 클라이언트의 ViewModel과 View 구조가 깨지지 않도록 설계 원칙을 유지했습니다.
+* **실시간 읽음 동기화**: 채팅방 진입 시 미확인 메시지를 일괄 업데이트하며, `ChatHub`를 통해 상대방 UI의 읽음 표시를 즉시 갱신하도록 로직을 수정했습니다.
+* **실시간 메시지 삭제 라이프사이클 동기화**: 임의의 메시지 삭제 요청 시 서버 `ChatController`에서 DB 레코드를 처리한 후, SignalR Hub를 통해 브로드캐스팅합니다. 수신부 클라이언트들은 `WeakReferenceMessenger`를 통해 메모리 내 컬렉션(`Messages`)에서 해당 ID의 객체를 실시간 동적 제거함으로써 양측 화면의 정합성을 실시간 동기화합니다. (추가 🌟)
+* **MVVM 패턴 준수**: 서버 연동 및 선반영 구조가 추가되어도 클라이언트의 ViewModel과 View 구조가 깨지지 않도록 설계 원칙을 철저히 유지했습니다.
 
 ---
 
 ## 🏗 아키텍처 (MVVM Pattern)
 
-View와 ViewModel의 철저한 분리를 통해 UI 변경에 유연하게 대응하며, **WeakReferenceMessenger**와 **UserStore**의 조합으로 대규모 데이터 동기화 시에도 낮은 결합도를 유지하도록 설계되었습니다.
+View와 ViewModel의 철저한 분리를 통해 UI 변경에 유연하게 대응하며, **WeakReferenceMessenger**와 **UserStore**의 조합으로 대규모 데이터 동기화 시에도 낮은 결합도를 유지하도록 설계되었습니다 
